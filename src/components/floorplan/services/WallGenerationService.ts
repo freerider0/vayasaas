@@ -46,7 +46,7 @@ class WallGenerationService {
     if (!wallEntity) return;
     
     const wallComponent = wallEntity.get(WallComponent as any) as WallComponent;
-    const geometry = wallEntity.get(GeometryComponent);
+    const geometry = wallEntity.get(GeometryComponent) as GeometryComponent;
     
     if (!wallComponent || !geometry) return;
     
@@ -54,7 +54,7 @@ class WallGenerationService {
     wallComponent.thickness = thickness;
     
     // Recalculate wall geometry with proper corner intersections
-    const roomGeometry = roomEntity.get(GeometryComponent);
+    const roomGeometry = roomEntity.get(GeometryComponent) as GeometryComponent;
     const floorPolygon = roomGeometry?.vertices || room.floorPolygon;
     const numEdges = floorPolygon.length;
     
@@ -177,12 +177,12 @@ class WallGenerationService {
     if (!wallEntity) return;
     
     const wallComponent = wallEntity.get(WallComponent as any) as WallComponent;
-    const geometry = wallEntity.get(GeometryComponent);
+    const geometry = wallEntity.get(GeometryComponent) as GeometryComponent;
     
     if (!wallComponent || !geometry || !geometry.vertices || geometry.vertices.length !== 4) return;
     
     // Recalculate just the corners for this wall
-    const roomGeometry = roomEntity.get(GeometryComponent);
+    const roomGeometry = roomEntity.get(GeometryComponent) as GeometryComponent;
     const floorPolygon = roomGeometry?.vertices || room.floorPolygon;
     const numEdges = floorPolygon.length;
     
@@ -279,7 +279,7 @@ class WallGenerationService {
     overrideThickness?: { edgeIndex: number; thickness: number }
   ): Entity[] {
     const room = getRoomComponent(roomEntity);
-    const roomAssembly = roomEntity.get(AssemblyComponent);
+    const roomAssembly = roomEntity.get(AssemblyComponent) as AssemblyComponent;
 
     if (!room || !roomAssembly) {
       // Cannot generate walls: room missing components
@@ -317,27 +317,85 @@ class WallGenerationService {
       preservedProperties
     );
 
-    // Add walls to world
+    // Update or add walls to world
+    const updatedWallIds: string[] = [];
+    const processedExistingWalls = new Set<string>();
+    
     for (let i = 0; i < walls.length; i++) {
-      const wall = walls[i];
+      const newWall = walls[i];
+      const wallComponent = newWall.get(WallComponent as any) as WallComponent;
+      
+      // Check if we have an existing wall for this edge
+      const preserved = preservedProperties.get(wallComponent.edgeIndex);
+      let wallToUse = newWall;
+      
+      if (preserved?.existingWallId) {
+        // Update existing wall instead of creating new one
+        const existingWall = world.get(preserved.existingWallId);
+        if (existingWall) {
+          // Update the existing wall's components with new data
+          const existingWallComponent = existingWall.get(WallComponent as any) as WallComponent;
+          const existingGeometry = existingWall.get(GeometryComponent) as GeometryComponent;
+          const newGeometry = newWall.get(GeometryComponent) as GeometryComponent;
+          
+          // Update wall component data (keep the same reference)
+          Object.assign(existingWallComponent, wallComponent);
+          
+          // Update geometry
+          if (existingGeometry && newGeometry) {
+            existingGeometry.vertices = newGeometry.vertices;
+            existingGeometry.edges = newGeometry.edges;
+            existingGeometry.bounds = newGeometry.bounds;
+          }
+          
+          // Update assembly if needed
+          const existingAssembly = existingWall.get(AssemblyComponent) as AssemblyComponent;
+          const newAssembly = newWall.get(AssemblyComponent) as AssemblyComponent;
+          if (existingAssembly && newAssembly) {
+            existingAssembly.position = newAssembly.position;
+            existingAssembly.rotation = newAssembly.rotation;
+            existingAssembly.scale = newAssembly.scale;
+          }
+          
+          world.updateEntity(existingWall);
+          wallToUse = existingWall;
+          processedExistingWalls.add(preserved.existingWallId);
+        } else {
+          // Existing wall not found, use new one
+          world.add(newWall);
+        }
+      } else {
+        // No existing wall for this edge, add new one
+        world.add(newWall);
+      }
+      
       // Set wall as child of room
-      const hierarchy = wall.get(HierarchyComponent);
+      const hierarchy = wallToUse.get(HierarchyComponent) as HierarchyComponent;
       if (!hierarchy) {
         const newHierarchy = new HierarchyComponent(10, 1); // zIndex 10 for walls, layer 1
         newHierarchy.parent = roomEntity.id;
-        wall.add(HierarchyComponent, newHierarchy);
+        wallToUse.add(HierarchyComponent, newHierarchy);
       } else {
         hierarchy.parent = roomEntity.id;
       }
       
-      world.add(wall);
+      updatedWallIds.push(wallToUse.id);
+    }
+    
+    // Remove any old walls that weren't updated (e.g., if room lost an edge)
+    if (room.walls) {
+      for (const oldWallId of room.walls) {
+        if (!processedExistingWalls.has(oldWallId)) {
+          world.remove(oldWallId);
+        }
+      }
     }
 
     // Update room's wall references
-    room.walls = walls.map(w => w.id);
+    room.walls = updatedWallIds;
     
     // Update room's floorPolygon to match current geometry vertices
-    const roomGeometry = roomEntity.get(GeometryComponent);
+    const roomGeometry = roomEntity.get(GeometryComponent) as GeometryComponent;
     if (roomGeometry && roomGeometry.vertices) {
       room.floorPolygon = [...roomGeometry.vertices];
     }
@@ -359,7 +417,7 @@ class WallGenerationService {
     const walls: Entity[] = [];
     
     // Get the actual current vertices from the room's geometry component
-    const roomGeometry = roomEntity.get(GeometryComponent);
+    const roomGeometry = roomEntity.get(GeometryComponent) as GeometryComponent;
     const floorPolygon = roomGeometry?.vertices || room.floorPolygon;
     const numEdges = floorPolygon.length;
 
@@ -585,9 +643,9 @@ class WallGenerationService {
   /**
    * Clear existing walls for a room and return their properties for preservation
    */
-  private clearExistingWalls(roomEntity: Entity, world: World): Map<number, { wallType: WallType; thickness: number; height: number; color?: string }> {
+  private clearExistingWalls(roomEntity: Entity, world: World): Map<number, { wallType: WallType; thickness: number; height: number; color?: string; existingWallId?: string }> {
     const room = getRoomComponent(roomEntity);
-    const preservedProperties = new Map<number, { wallType: WallType; thickness: number; height: number; color?: string }>();
+    const preservedProperties = new Map<number, { wallType: WallType; thickness: number; height: number; color?: string; existingWallId?: string }>();
     
     if (!room || !room.walls) return preservedProperties;
 
@@ -597,20 +655,21 @@ class WallGenerationService {
         const wallComponent = wall.get(WallComponent as any) as WallComponent;
         const styleComponent = wall.get(StyleComponent) as StyleComponent;
         if (wallComponent) {
-          // Preserve wall type, thickness, height and color by edge index
+          // Preserve wall type, thickness, height, color AND the wall entity ID by edge index
           const preserved = {
             wallType: wallComponent.wallType,
             thickness: wallComponent.thickness,
             height: wallComponent.height,
-            color: styleComponent?.fill?.color
+            color: styleComponent?.fill?.color,
+            existingWallId: wallId  // Keep track of the existing wall ID
           };
           preservedProperties.set(wallComponent.edgeIndex, preserved);
         }
-        world.remove(wallId);
+        // Don't remove the wall yet - we'll update it in place
       }
     }
 
-    room.walls = [];
+    // Don't clear room.walls yet - we'll update the list after processing
     return preservedProperties;
   }
 
@@ -640,7 +699,7 @@ class WallGenerationService {
     adjacentRooms: Entity[]
   ): WallType {
     const room = getRoomComponent(roomEntity);
-    const roomAssembly = roomEntity.get(AssemblyComponent);
+    const roomAssembly = roomEntity.get(AssemblyComponent) as AssemblyComponent;
 
     if (!room || !roomAssembly) return 'exterior';
 
@@ -659,7 +718,7 @@ class WallGenerationService {
     // Check if this edge is shared with any adjacent room
     for (const adjacentEntity of adjacentRooms) {
       const adjacentRoom = getRoomComponent(adjacentEntity);
-      const adjacentAssembly = adjacentEntity.get(AssemblyComponent);
+      const adjacentAssembly = adjacentEntity.get(AssemblyComponent) as AssemblyComponent;
 
       if (!adjacentRoom || !adjacentAssembly) continue;
 
@@ -747,7 +806,7 @@ class WallGenerationService {
     const roomEntity = world.get(wallComponent.roomId);
     if (!roomEntity) return;
 
-    const roomGeometry = roomEntity.get(GeometryComponent);
+    const roomGeometry = roomEntity.get(GeometryComponent) as GeometryComponent;
     if (!roomGeometry || !roomGeometry.vertices) return;
 
     const edgeIndex = wallComponent.edgeIndex;
@@ -787,7 +846,7 @@ class WallGenerationService {
     ];
 
     // Update the wall's geometry
-    const wallGeometry = wallEntity.get(GeometryComponent);
+    const wallGeometry = wallEntity.get(GeometryComponent) as GeometryComponent;
     if (wallGeometry) {
       wallGeometry.vertices = wallVertices;
       world.updateEntity(wallEntity);

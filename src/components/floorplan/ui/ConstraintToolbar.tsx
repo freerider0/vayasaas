@@ -1,9 +1,13 @@
 'use client';
 
-import React, { MutableRefObject } from 'react';
+import React, { MutableRefObject, useMemo } from 'react';
 import { World } from '../core/World';
 import { Entity } from '../core/Entity';
-import { GeometryComponent, Primitive, ConstraintPrimitive } from '../components/GeometryComponent';
+import { GeometryComponent } from '../components/GeometryComponent';
+import { WallComponent } from '../components/WallComponent';
+import type { Primitive } from '../../../lib/geometry/NiceConstraintSolver';
+import { useStore } from '@nanostores/react';
+import { $selectedWallIds } from '../stores/canvasStore';
 
 interface ConstraintToolbarProps {
   selectedRoomId: string;
@@ -24,6 +28,28 @@ export function ConstraintToolbar({
   worldRef,
   triggerConstraintSolving
 }: ConstraintToolbarProps) {
+  const selectedWallIds = useStore($selectedWallIds);
+  
+  // Get the edge index from the first selected wall (for single wall constraints)
+  const wallEdgeIndex = useMemo(() => {
+    if (!selectedWallIds.size || !worldRef.current) return null;
+    
+    // Use the first selected wall for now
+    const firstWallId = Array.from(selectedWallIds)[0];
+    const wallEntity = worldRef.current.get(firstWallId);
+    if (!wallEntity) return null;
+    
+    const wallComponent = wallEntity.get(WallComponent as any) as WallComponent;
+    if (!wallComponent) return null;
+    
+    console.log('[ConstraintToolbar] Wall selected:', firstWallId, 'maps to edge:', wallComponent.edgeIndex);
+    // Return the edge index that this wall represents
+    return wallComponent.edgeIndex;
+  }, [selectedWallIds, worldRef.current]);
+  
+  // Use wall edge index if available, otherwise use the directly selected edge
+  const effectiveEdgeIndex = wallEdgeIndex !== null ? wallEdgeIndex : selectedEdgeIndex;
+  console.log('[ConstraintToolbar] effectiveEdgeIndex:', effectiveEdgeIndex, 'from wall:', wallEdgeIndex, 'or direct edge:', selectedEdgeIndex);
   
   const addConstraint = (type: string, params: any) => {
     console.log('[ConstraintToolbar] Adding constraint:', type, params);
@@ -60,22 +86,59 @@ export function ConstraintToolbar({
               ? `(${selectedVertexIndices.length} vertices)`
               : selectedEdgeIndices.length > 0 
                 ? `(${selectedEdgeIndices.length} edges)`
-                : selectedEdgeIndex !== null 
-                  ? `(Edge ${selectedEdgeIndex + 1})`
-                  : '(Shift+Click to select)'
+                : effectiveEdgeIndex !== null 
+                  ? selectedWallIds.size > 0
+                    ? selectedWallIds.size === 1 
+                      ? `(Wall - Edge ${effectiveEdgeIndex + 1})`
+                      : `(${selectedWallIds.size} walls selected)`
+                    : `(Edge ${effectiveEdgeIndex + 1})`
+                  : '(Select walls or Shift+Click edges)'
           }
         </div>
         <div className="flex gap-1">
           {/* Horizontal constraint */}
           <button
             onClick={() => {
-              if (selectedEdgeIndex !== null) {
+              if (effectiveEdgeIndex !== null) {
                 const roomEntity = roomEntities.get(selectedRoomId);
                 if (roomEntity) {
                   const geometry = roomEntity.get(GeometryComponent) as GeometryComponent;
-                  const line = geometry.primitives.find(p => p.id === `l${selectedEdgeIndex}`) as any;
+                  
+                  // Ensure primitives are initialized
+                  if (!geometry.primitives || geometry.primitives.length === 0) {
+                    // Initialize primitives from vertices and edges
+                    const primitives: Primitive[] = [];
+                    
+                    // Add point primitives
+                    for (let i = 0; i < geometry.vertices.length; i++) {
+                      primitives.push({
+                        id: `p${i}`,
+                        type: 'point',
+                        x: geometry.vertices[i].x,
+                        y: geometry.vertices[i].y,
+                        fixed: false
+                      } as any);
+                    }
+                    
+                    // Add line primitives
+                    for (let i = 0; i < geometry.edges.length; i++) {
+                      primitives.push({
+                        id: `l${i}`,
+                        type: 'line',
+                        p1_id: `p${geometry.edges[i].startIndex}`,
+                        p2_id: `p${geometry.edges[i].endIndex}`
+                      } as any);
+                    }
+                    
+                    geometry.setPrimitives(primitives);
+                  }
+                  
+                  // Now find the line and apply constraint
+                  const line = geometry.primitives.find(p => p.id === `l${effectiveEdgeIndex}`) as any;
                   if (line && line.p1_id && line.p2_id) {
                     addConstraint('horizontal_pp', { p1_id: line.p1_id, p2_id: line.p2_id });
+                  } else {
+                    console.warn('[ConstraintToolbar] Could not find line primitive for edge', effectiveEdgeIndex);
                   }
                 }
               }
@@ -89,13 +152,46 @@ export function ConstraintToolbar({
           {/* Vertical constraint */}
           <button
             onClick={() => {
-              if (selectedEdgeIndex !== null) {
+              if (effectiveEdgeIndex !== null) {
                 const roomEntity = roomEntities.get(selectedRoomId);
                 if (roomEntity) {
                   const geometry = roomEntity.get(GeometryComponent) as GeometryComponent;
-                  const line = geometry.primitives.find(p => p.id === `l${selectedEdgeIndex}`) as any;
+                  
+                  // Ensure primitives are initialized
+                  if (!geometry.primitives || geometry.primitives.length === 0) {
+                    // Initialize primitives from vertices and edges
+                    const primitives: Primitive[] = [];
+                    
+                    // Add point primitives
+                    for (let i = 0; i < geometry.vertices.length; i++) {
+                      primitives.push({
+                        id: `p${i}`,
+                        type: 'point',
+                        x: geometry.vertices[i].x,
+                        y: geometry.vertices[i].y,
+                        fixed: false
+                      } as any);
+                    }
+                    
+                    // Add line primitives
+                    for (let i = 0; i < geometry.edges.length; i++) {
+                      primitives.push({
+                        id: `l${i}`,
+                        type: 'line',
+                        p1_id: `p${geometry.edges[i].startIndex}`,
+                        p2_id: `p${geometry.edges[i].endIndex}`
+                      } as any);
+                    }
+                    
+                    geometry.setPrimitives(primitives);
+                  }
+                  
+                  // Now find the line and apply constraint
+                  const line = geometry.primitives.find(p => p.id === `l${effectiveEdgeIndex}`) as any;
                   if (line && line.p1_id && line.p2_id) {
                     addConstraint('vertical_pp', { p1_id: line.p1_id, p2_id: line.p2_id });
+                  } else {
+                    console.warn('[ConstraintToolbar] Could not find line primitive for edge', effectiveEdgeIndex);
                   }
                 }
               }

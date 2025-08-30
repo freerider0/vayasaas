@@ -86,7 +86,7 @@ export const $rotationState = map({
 // Selection state - just keep track of count for UI
 export const $selectedEntities = atom<Set<string>>(new Set());
 export const $hoveredEntity = atom<string | undefined>(undefined);
-export const $selectedWallId = atom<string | null>(null);
+export const $selectedWallIds = atom<Set<string>>(new Set());
 
 // Focus mode state
 export const $focusMode = map({

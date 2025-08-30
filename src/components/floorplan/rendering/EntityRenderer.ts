@@ -11,12 +11,13 @@ import { StyleComponent } from '../components/StyleComponent';
 import { GeometryComponent } from '../components/GeometryComponent';
 import { InteractableComponent } from '../components/InteractableComponent';
 import { HierarchyComponent } from '../components';
-import { $editorMode, $editingState, EditorMode } from '../stores/canvasStore';
+import { $editorMode, $editingState, $selectedWallIds, EditorMode } from '../stores/canvasStore';
 import { Point, Viewport, worldToScreen } from '../utils/coordinateUtils';
 import { DimensionRenderer } from './DimensionRenderer';
 
 export class EntityRenderer {
   private dimensionRenderer: DimensionRenderer;
+  private world?: World;
 
   constructor() {
     this.dimensionRenderer = new DimensionRenderer();
@@ -26,6 +27,8 @@ export class EntityRenderer {
    * Render all entities in the world
    */
   renderAll(ctx: CanvasRenderingContext2D, world: World, viewport?: Viewport): void {
+    this.world = world; // Store world reference for accessing entities
+    this.dimensionRenderer.setWorld(world); // Pass world to dimension renderer
     const entities = world.all();
     
     // Sort by z-index if needed
@@ -179,7 +182,7 @@ export class EntityRenderer {
     
     // Render dimensions if viewport is available
     if (viewport) {
-      this.dimensionRenderer.renderRoomDimensions(ctx, entity, room, assembly, viewport);
+      this.dimensionRenderer.renderRoomDimensions(ctx, entity, room, assembly, viewport, this.world);
     }
   }
 
@@ -193,6 +196,9 @@ export class EntityRenderer {
     world: World,
     viewport?: Viewport
   ): void {
+    // Check if this wall is selected
+    const selectedWallIds = $selectedWallIds.get();
+    const isSelected = selectedWallIds.has(entity.id);
     const style: StyleComponent | undefined = entity.get(StyleComponent);
     const geometry: GeometryComponent | undefined = entity.get(GeometryComponent);
     const hierarchy: HierarchyComponent | undefined = entity.get(HierarchyComponent);
@@ -259,6 +265,118 @@ export class EntityRenderer {
         ctx.lineWidth = style.stroke.width || 1;
         ctx.globalAlpha = style.opacity || 1;
         ctx.stroke();
+      }
+      
+      // Draw selection highlight if this wall is selected
+      if (isSelected) {
+        ctx.strokeStyle = '#2563eb'; // Blue color
+        ctx.lineWidth = 4; // Thicker line
+        ctx.globalAlpha = 0.8;
+        ctx.stroke();
+      }
+      
+      // Draw apertures (doors and windows)
+      if (wall.apertures && wall.apertures.length > 0) {
+        // Wall vertices: [innerStart, innerEnd, outerEnd, outerStart]
+        const innerStart = geometry.vertices[0];
+        const innerEnd = geometry.vertices[1];
+        const outerEnd = geometry.vertices[2];
+        const outerStart = geometry.vertices[3];
+        
+        // Calculate wall direction along inner edge
+        const wallDx = innerEnd.x - innerStart.x;
+        const wallDy = innerEnd.y - innerStart.y;
+        const wallLength = Math.sqrt(wallDx * wallDx + wallDy * wallDy);
+        
+        if (wallLength > 0) {
+          // Unit vector along wall
+          const unitX = wallDx / wallLength;
+          const unitY = wallDy / wallLength;
+          
+          // Perpendicular vector (rotate wall direction by 90 degrees)
+          // This gives us the direction perpendicular to the wall pointing outward
+          const perpX = unitY;  // Rotate -90 degrees: (x,y) -> (y,-x) for outward direction
+          const perpY = -unitX;
+          
+          ctx.save();
+          
+          for (const aperture of wall.apertures) {
+            // Convert aperture width from meters to pixels (1px = 1cm, so 1m = 100px)
+            const apertureWidthPx = aperture.width * 100;
+            
+            // Calculate aperture position along wall based on anchor vertex
+            let startDist: number;
+            if (aperture.anchorVertex === 'end') {
+              // Distance is from end vertex, so we need to calculate from the end
+              startDist = wallLength - (aperture.distance * 100) - apertureWidthPx;
+            } else {
+              // Distance is from start vertex (default)
+              startDist = aperture.distance * 100; // Convert to pixels
+            }
+            const endDist = startDist + apertureWidthPx;
+            
+            // Aperture corners on inner edge
+            const innerApertureStart = {
+              x: innerStart.x + unitX * startDist,
+              y: innerStart.y + unitY * startDist
+            };
+            const innerApertureEnd = {
+              x: innerStart.x + unitX * endDist,
+              y: innerStart.y + unitY * endDist
+            };
+            
+            // Aperture corners on outer edge (using wall thickness in pixels)
+            // Wall thickness is already in pixels (1px = 1cm)
+            const outerApertureStart = {
+              x: innerApertureStart.x + perpX * wall.thickness,
+              y: innerApertureStart.y + perpY * wall.thickness
+            };
+            const outerApertureEnd = {
+              x: innerApertureEnd.x + perpX * wall.thickness,
+              y: innerApertureEnd.y + perpY * wall.thickness
+            };
+            
+            // Draw aperture as white rectangle
+            ctx.fillStyle = '#FFFFFF';
+            ctx.globalAlpha = 1;
+            
+            ctx.beginPath();
+            ctx.moveTo(innerApertureStart.x, innerApertureStart.y);
+            ctx.lineTo(innerApertureEnd.x, innerApertureEnd.y);
+            ctx.lineTo(outerApertureEnd.x, outerApertureEnd.y);
+            ctx.lineTo(outerApertureStart.x, outerApertureStart.y);
+            ctx.closePath();
+            
+            // Fill with white to create opening
+            ctx.fill();
+            
+            // Draw door arc if it's a door
+            if (aperture.type === 'door') {
+              ctx.strokeStyle = '#666666';
+              ctx.lineWidth = 1;
+              ctx.globalAlpha = 0.5;
+              
+              ctx.beginPath();
+              // Draw arc from door hinge point
+              const arcRadius = apertureWidthPx;
+              const baseAngle = Math.atan2(perpY, perpX);
+              ctx.arc(innerApertureStart.x, innerApertureStart.y, arcRadius, 
+                      baseAngle - Math.PI/2, baseAngle, false);
+              ctx.stroke();
+              
+              // Draw door panel line
+              ctx.beginPath();
+              ctx.moveTo(innerApertureStart.x, innerApertureStart.y);
+              ctx.lineTo(
+                innerApertureStart.x + Math.cos(baseAngle - Math.PI/4) * arcRadius,
+                innerApertureStart.y + Math.sin(baseAngle - Math.PI/4) * arcRadius
+              );
+              ctx.stroke();
+            }
+          }
+          
+          ctx.restore();
+        }
       }
     }
     

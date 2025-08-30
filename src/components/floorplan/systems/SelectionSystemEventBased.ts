@@ -5,6 +5,7 @@ import { InteractableComponent } from '../components/InteractableComponent';
 import { GeometryComponent, Point } from '../components/GeometryComponent';
 import { AssemblyComponent } from '../components/AssemblyComponent';
 import { RoomComponent } from '../components/RoomComponent';
+import { WallComponent } from '../components/WallComponent';
 import { canvasEventBus } from '../../../lib/canvas/events/CanvasEventBus';
 import { $toolMode, $selectedEntities, ToolMode, $editorMode, EditorMode, $editingState } from '../stores/canvasStore';
 
@@ -143,7 +144,12 @@ export class SelectionSystemEventBased implements System {
       return; // Let AssemblySystemEventBased handle it
     }
     
+    // In Edit mode, don't handle clicks on walls - let InputService handle wall selection
     const currentMode = $editorMode.get();
+    if (currentMode === EditorMode.Edit && hitEntity && hitEntity.has(WallComponent as any)) {
+      return; // Wall selection is handled by InputService
+    }
+    
     const currentTime = Date.now();
     
     // Check for double-click

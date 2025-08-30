@@ -13,6 +13,7 @@ interface ConstraintToolsPanelProps {
   roomEntities: Map<string, Entity>;
   worldRef: MutableRefObject<World | null>;
   triggerConstraintSolving: (roomId: string) => void;
+  isWallSelection?: boolean;
 }
 
 export function ConstraintToolsPanel({
@@ -22,7 +23,8 @@ export function ConstraintToolsPanel({
   selectedEdgeIndex,
   roomEntities,
   worldRef,
-  triggerConstraintSolving
+  triggerConstraintSolving,
+  isWallSelection = false
 }: ConstraintToolsPanelProps) {
   
   return (
@@ -30,13 +32,17 @@ export function ConstraintToolsPanel({
       <div className="bg-white rounded-lg shadow-lg p-2">
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 text-center">
           Constraints {
-            selectedVertexIndices.length > 0 
-              ? `(${selectedVertexIndices.length} vertices)`
-              : selectedEdgeIndices.length > 0 
-                ? `(${selectedEdgeIndices.length} edges)`
-                : selectedEdgeIndex !== null 
-                  ? `(Edge ${selectedEdgeIndex + 1})`
-                  : '(Shift+Click to select)'
+            isWallSelection && selectedEdgeIndices.length > 0
+              ? `(${selectedEdgeIndices.length} wall${selectedEdgeIndices.length > 1 ? 's' : ''})`
+              : isWallSelection && selectedEdgeIndex !== null
+                ? `(Wall ${selectedEdgeIndex + 1})`
+                : selectedVertexIndices.length > 0 
+                  ? `(${selectedVertexIndices.length} vertices)`
+                  : selectedEdgeIndices.length > 0 
+                    ? `(${selectedEdgeIndices.length} edges)`
+                    : selectedEdgeIndex !== null 
+                      ? `(Edge ${selectedEdgeIndex + 1})`
+                      : '(Shift+Click to select)'
           }
         </div>
         <div className="flex gap-1">

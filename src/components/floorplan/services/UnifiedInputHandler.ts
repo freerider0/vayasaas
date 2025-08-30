@@ -5,6 +5,7 @@
 
 import { World } from '../core/World';
 import { Point } from '../components/GeometryComponent';
+import { AssemblyComponent } from '../components/AssemblyComponent';
 import { commandManager } from '../commands/CommandManager';
 import { MoveEntityCommand } from '../commands/MoveEntityCommand';
 import { RotateEntityCommand } from '../commands/RotateEntityCommand';
@@ -232,7 +233,7 @@ export class UnifiedInputHandler {
       const selectedIds = selectionStore.getSelectedEntityIds();
       for (const id of selectedIds) {
         const e = this.world.get(id);
-        const assembly = e?.get('AssemblyComponent' as any);
+        const assembly = e?.get('AssemblyComponent' as any) as AssemblyComponent;
         if (assembly) {
           this.initialPositions.set(id, { ...assembly.position });
         }
@@ -256,7 +257,7 @@ export class UnifiedInputHandler {
     const entity = this.world.get(editingEntityId);
     if (!entity) return;
     
-    const assembly = entity.get('AssemblyComponent' as any);
+    const assembly = entity.get('AssemblyComponent' as any) as AssemblyComponent;
     if (!assembly) return;
     
     // Get vertices in world space
@@ -376,10 +377,10 @@ export class UnifiedInputHandler {
     const selectedIds = selectionStore.getSelectedEntityIds();
     for (const id of selectedIds) {
       const entity = this.world.get(id);
-      const assembly = entity?.get('AssemblyComponent' as any);
+      const assembly = entity?.get('AssemblyComponent' as any) as AssemblyComponent;
       const initialPos = this.initialPositions.get(id);
       
-      if (assembly && initialPos) {
+      if (entity && assembly && initialPos) {
         assembly.position = {
           x: initialPos.x + snappedDelta.x,
           y: initialPos.y + snappedDelta.y
@@ -401,8 +402,8 @@ export class UnifiedInputHandler {
     // Restore initial positions
     for (const [id, pos] of this.initialPositions) {
       const entity = this.world.get(id);
-      const assembly = entity?.get('AssemblyComponent' as any);
-      if (assembly) {
+      const assembly = entity?.get('AssemblyComponent' as any) as AssemblyComponent;
+      if (entity && assembly) {
         assembly.position = pos;
         this.world.updateEntity(entity);
       }
@@ -517,8 +518,8 @@ export class UnifiedInputHandler {
       if (this.inputState.dragType === 'move' && this.world) {
         for (const [id, pos] of this.initialPositions) {
           const entity = this.world.get(id);
-          const assembly = entity?.get('AssemblyComponent' as any);
-          if (assembly) {
+          const assembly = entity?.get('AssemblyComponent' as any) as AssemblyComponent;
+          if (entity && assembly) {
             assembly.position = pos;
             this.world.updateEntity(entity);
           }

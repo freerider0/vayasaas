@@ -46,7 +46,7 @@ import {
   $mapState,
   $viewport,
   $selectedEntities,
-  $selectedWallId,
+  $selectedWallIds,
   EditorMode,
   ToolMode,
   setGridSnapEnabled,
@@ -60,6 +60,7 @@ import { GeometryComponent } from './components/GeometryComponent';
 import { AssemblyComponent } from './components/AssemblyComponent';
 import { InteractableComponent } from './components/InteractableComponent';
 import { StyleComponent } from './components/StyleComponent';
+import { WallComponent } from './components/WallComponent';
 
 // Builders
 import { RoomBuilder } from './builders/RoomBuilder';
@@ -98,7 +99,7 @@ export const FloorPlanApp: React.FC = () => {
   const rotationState = useStore($rotationState);
   const mapState = useStore($mapState);
   const selectedEntities = useStore($selectedEntities);
-  const selectedWallId = useStore($selectedWallId);
+  const selectedWallIds = useStore($selectedWallIds);
   const viewport = useStore($viewport);
   const gridConfig = useStore($gridConfig);
   
@@ -123,6 +124,9 @@ export const FloorPlanApp: React.FC = () => {
   const [selectedVertexIndices, setSelectedVertexIndices] = useState<number[]>([]);
   const [selectedEdgeIndices, setSelectedEdgeIndices] = useState<number[]>([]);
   const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null);
+  
+  // Map wall IDs to edge indices for constraint application
+  const [wallToEdgeMap, setWallToEdgeMap] = useState<Map<string, number>>(new Map());
   
   // Dimension editing
   const [editingDimension, setEditingDimension] = useState<number | null>(null);
@@ -217,6 +221,7 @@ export const FloorPlanApp: React.FC = () => {
       mousePosition: currentMouseWorld || undefined
     });
   }, [gridConfig.visible, viewport, currentMouseWorld]);
+  
   
   // Create room from vertices
   const createRoomFromVertices = useCallback((vertices: Vertex[]) => {
@@ -519,7 +524,7 @@ export const FloorPlanApp: React.FC = () => {
       setEditPosition(null);
       setSelectedEdgeIndex(null);
       // Clear wall selection when leaving edit mode
-      $selectedWallId.set(null);
+      $selectedWallIds.set(new Set());
     }
   }, [mode]);
   
@@ -540,6 +545,56 @@ export const FloorPlanApp: React.FC = () => {
     
     return unsubscribe;
   }, []);
+  
+  // Update wall-to-edge mapping when walls change
+  useEffect(() => {
+    if (!worldRef.current) return;
+    
+    const updateWallToEdgeMap = () => {
+      const newWallToEdgeMap = new Map<string, number>();
+      
+      // Get all wall entities
+      const wallEntities = worldRef.current?.entitiesMatching(e => e.has(WallComponent as any)) || [];
+      
+      wallEntities.forEach(wallEntity => {
+        const wall = wallEntity.get(WallComponent as any) as WallComponent;
+        if (wall) {
+          newWallToEdgeMap.set(wallEntity.id, wall.edgeIndex);
+        }
+      });
+      
+      setWallToEdgeMap(newWallToEdgeMap);
+    };
+    
+    // Initial update
+    updateWallToEdgeMap();
+    
+    // Set up an interval to check for wall updates
+    const intervalId = setInterval(updateWallToEdgeMap, 500);
+    
+    return () => clearInterval(intervalId);
+  }, [selectedRoomId]); // Update when selected room changes
+  
+  // Map selected walls to edge indices
+  const selectedEdgeIndicesFromWalls = React.useMemo(() => {
+    const edgeIndices: number[] = [];
+    
+    selectedWallIds.forEach(wallId => {
+      const edgeIndex = wallToEdgeMap.get(wallId);
+      if (edgeIndex !== undefined && selectedRoomId) {
+        // Check if this wall belongs to the selected room
+        const wallEntity = worldRef.current?.get(wallId);
+        if (wallEntity) {
+          const wall = wallEntity.get(WallComponent as any) as WallComponent;
+          if (wall && wall.roomId === selectedRoomId) {
+            edgeIndices.push(edgeIndex);
+          }
+        }
+      }
+    });
+    
+    return edgeIndices;
+  }, [selectedWallIds, wallToEdgeMap, selectedRoomId]);
   
   // Wait for canvas ref to be ready
   if (!canvasRef) {
@@ -581,21 +636,32 @@ export const FloorPlanApp: React.FC = () => {
         worldRef={worldRef}
       />
       
-      {/* Constraint tools (shown in Edit mode) */}
+      {/* Constraint tools (shown in Edit mode when room is selected or walls are selected) */}
       {mode === EditorMode.Edit && selectedRoomId && (
         <ConstraintToolsPanel
           selectedRoomId={selectedRoomId}
           selectedVertexIndices={selectedVertexIndices}
-          selectedEdgeIndices={selectedEdgeIndices}
-          selectedEdgeIndex={selectedEdgeIndex}
+          selectedEdgeIndices={
+            // Combine edge indices from direct selection and wall selection
+            selectedEdgeIndicesFromWalls.length > 0 
+              ? selectedEdgeIndicesFromWalls 
+              : selectedEdgeIndices
+          }
+          selectedEdgeIndex={
+            // Use edge index from wall selection if available
+            selectedEdgeIndicesFromWalls.length === 1 
+              ? selectedEdgeIndicesFromWalls[0] 
+              : selectedEdgeIndex
+          }
           roomEntities={roomEntities}
           worldRef={worldRef}
           triggerConstraintSolving={triggerConstraintSolving}
+          isWallSelection={selectedEdgeIndicesFromWalls.length > 0}
         />
       )}
       
       {/* Wall Inspector (right side, only in Edit mode) */}
-      {mode === EditorMode.Edit && selectedWallId && (
+      {mode === EditorMode.Edit && selectedWallIds.size > 0 && (
         <WallInspector world={worldRef.current} />
       )}
       

@@ -15,3 +15,4 @@ export { StyleComponent, type StrokeStyle, type FillStyle, type TextStyle } from
 export { InteractableComponent } from './InteractableComponent';
 export { TagComponent } from './TagComponent';
 export { HierarchyComponent } from './HierarchyComponent';
+export { DimensionLabelComponent } from './DimensionLabelComponent';

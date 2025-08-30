@@ -652,7 +652,7 @@ export class RoomAssemblySnapService {
    * Get the center point of a room
    */
   private getRoomCenter(entity: Entity, offset: Point): Point {
-    const assembly = entity.get(AssemblyComponent);
+    const assembly = entity.get(AssemblyComponent) as AssemblyComponent;
     if (!assembly) return { x: 0, y: 0 };
     
     return {

@@ -13,6 +13,7 @@ import { viewportController } from '../../services/ViewportController';
 import { snappingService } from '../../services/SnappingService';
 import { screenToWorld, worldToScreen, $toolMode, $drawingState, $editingState, $viewport, EditorMode, ToolMode } from '../../stores/canvasStore';
 import { DrawingGuideService } from '../../services/DrawingGuideService';
+import { dimensionLabelService } from '../../services/DimensionLabelService';
 
 type Vertex = { x: number; y: number };
 
@@ -65,36 +66,16 @@ export const CanvasArea = forwardRef<HTMLCanvasElement, CanvasAreaProps>(
     const [isDrawing, setIsDrawing] = React.useState(false);
     const drawingGuideServiceRef = React.useRef(new DrawingGuideService());
     
-    // Check if clicking on dimension label
-    const checkDimensionClick = (screenX: number, screenY: number, vertices: Vertex[]): number => {
-      const n = vertices.length;
+    // Check if clicking on dimension label using the service
+    const checkDimensionClick = (screenX: number, screenY: number, vertices: Vertex[], roomId: string | null): number => {
+      if (!roomId) return -1;
       
-      for (let i = 0; i < n; i++) {
-        const v1 = vertices[i];
-        const v2 = vertices[(i + 1) % n];
-        
-        // Calculate edge center in world coordinates
-        const centerX = (v1.x + v2.x) / 2;
-        const centerY = (v1.y + v2.y) / 2;
-        
-        // Convert to screen coordinates
-        const screenCenter = worldToScreen({ x: centerX, y: centerY }, viewport);
-        
-        // Calculate text offset perpendicular to edge
-        const angle = Math.atan2(v2.y - v1.y, v2.x - v1.x);
-        const offsetX = Math.sin(angle) * 20;
-        const offsetY = -Math.cos(angle) * 20;
-        
-        // Check if click is near the dimension text
-        const textX = screenCenter.x + offsetX;
-        const textY = screenCenter.y + offsetY;
-        
-        const dist = Math.hypot(screenX - textX, screenY - textY);
-        
-        // If within 30 pixels of the dimension text center
-        if (dist < 30) {
-          return i;
-        }
+      // Use the dimension label service for hit detection
+      const hit = dimensionLabelService.hitTest(screenX, screenY);
+      
+      // Check if the hit is for the correct room
+      if (hit && hit.roomId === roomId) {
+        return hit.edgeIndex;
       }
       
       return -1;
@@ -256,7 +237,7 @@ export const CanvasArea = forwardRef<HTMLCanvasElement, CanvasAreaProps>(
       if (mode === EditorMode.Edit && editingState.showDimensions) {
         const vertices = editingState.vertices;
         if (vertices.length >= 3) {
-          const dimensionIndex = checkDimensionClick(screenX, screenY, vertices);
+          const dimensionIndex = checkDimensionClick(screenX, screenY, vertices, editingState.roomId);
           if (dimensionIndex !== -1) {
             // Calculate the length of this segment
             const v1 = vertices[dimensionIndex];
@@ -308,7 +289,7 @@ export const CanvasArea = forwardRef<HTMLCanvasElement, CanvasAreaProps>(
       if (mode === EditorMode.Edit && editingState.showDimensions) {
         const vertices = editingState.vertices;
         if (vertices.length >= 3) {
-          const dimensionIndex = checkDimensionClick(screenX, screenY, vertices);
+          const dimensionIndex = checkDimensionClick(screenX, screenY, vertices, editingState.roomId);
           canvas.style.cursor = dimensionIndex !== -1 ? 'pointer' : 'default';
         } else {
           canvas.style.cursor = 'default';

@@ -1,5 +1,5 @@
 import { canvasEventBus } from '../../../lib/canvas/events/CanvasEventBus';
-import { $toolMode, $editorMode, $editingState, $selectedWallId, ToolMode, EditorMode } from '../stores/canvasStore';
+import { $toolMode, $editorMode, $editingState, $selectedWallIds, $selectedEntities, ToolMode, EditorMode } from '../stores/canvasStore';
 import { Point } from '../components/GeometryComponent';
 import { Entity } from '../core/Entity';
 import { World } from '../core/World';
@@ -144,16 +144,60 @@ export class InputService {
     
     // Check if a wall was clicked
     if (event.hitEntity && event.hitEntity.has(WallComponent as any)) {
-      // Select the wall in Edit mode
-      $selectedWallId.set(event.hitEntity.id);
+      const wallId = event.hitEntity.id;
+      const isShiftPressed = event.modifiers?.shift || false;
       
-      // Also emit entity select for selection system
-      canvasEventBus.emit('entity:select', {
-        entity: event.hitEntity,
-        point: event.point,
-        multi: event.modifiers?.shift,
-        world: event.world
-      });
+      // Handle wall selection (single or multi with shift)
+      const currentSelectedWalls = $selectedWallIds.get();
+      if (isShiftPressed) {
+        // Toggle wall in selection
+        const newSelection = new Set(currentSelectedWalls);
+        if (newSelection.has(wallId)) {
+          newSelection.delete(wallId);
+        } else {
+          newSelection.add(wallId);
+        }
+        $selectedWallIds.set(newSelection);
+      } else {
+        // Single selection - replace current selection
+        $selectedWallIds.set(new Set([wallId]));
+      }
+      
+      // Also select the wall's parent room for constraint operations
+      const wallComponent = event.hitEntity.get(WallComponent as any) as WallComponent;
+      if (wallComponent && wallComponent.roomId && event.world) {
+        // Set the room as selected in the editing state
+        $editingState.set({
+          ...$editingState.get(),
+          roomId: wallComponent.roomId
+        });
+        
+        // Find and select the parent room entity
+        const roomEntity = event.world.get(wallComponent.roomId);
+        if (roomEntity) {
+          // For single wall selection, select just that room
+          // For multi-wall selection, we might have walls from different rooms
+          if (!isShiftPressed) {
+            $selectedEntities.set(new Set([wallComponent.roomId]));
+          } else {
+            // Add the room to selected entities if shift is pressed
+            const currentSelectedEntities = $selectedEntities.get();
+            const newSelectedEntities = new Set(currentSelectedEntities);
+            newSelectedEntities.add(wallComponent.roomId);
+            $selectedEntities.set(newSelectedEntities);
+          }
+          
+          console.log('[InputService] Wall selected, room:', wallComponent.roomId, 'multi:', isShiftPressed);
+          
+          // Emit entity select for the room
+          canvasEventBus.emit('entity:select', {
+            entity: roomEntity,
+            point: event.point,
+            multi: isShiftPressed,
+            world: event.world
+          });
+        }
+      }
       return;
     }
     
@@ -210,7 +254,7 @@ export class InputService {
           }
         } else {
           // Clicked on empty space in edit mode - clear wall selection
-          $selectedWallId.set(null);
+          $selectedWallIds.set(new Set());
         }
       }
     }

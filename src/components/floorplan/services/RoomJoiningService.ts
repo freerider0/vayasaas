@@ -25,10 +25,10 @@ class RoomJoiningService {
   joinRooms(roomEntityA: Entity, roomEntityB: Entity): boolean {
     const roomA = getRoomComponent(roomEntityA);
     const roomB = getRoomComponent(roomEntityB);
-    const geoA = roomEntityA.get(GeometryComponent);
-    const geoB = roomEntityB.get(GeometryComponent);
-    const assemblyA = roomEntityA.get(AssemblyComponent);
-    const assemblyB = roomEntityB.get(AssemblyComponent);
+    const geoA = roomEntityA.get(GeometryComponent) as GeometryComponent;
+    const geoB = roomEntityB.get(GeometryComponent) as GeometryComponent;
+    const assemblyA = roomEntityA.get(AssemblyComponent) as AssemblyComponent;
+    const assemblyB = roomEntityB.get(AssemblyComponent) as AssemblyComponent;
     
     if (!roomA || !roomB || !geoA || !geoB || !assemblyA || !assemblyB) {
       console.warn('Cannot join rooms: missing components');
@@ -59,7 +59,7 @@ class RoomJoiningService {
         
         // Update geometry component
         if (geoB) {
-          geoB.updateVertices(roomB.floorPolygon);
+          geoB.setVertices(roomB.floorPolygon);
         }
         
         modified = true;
@@ -84,7 +84,7 @@ class RoomJoiningService {
         
         // Update geometry component
         if (geoA) {
-          geoA.updateVertices(roomA.floorPolygon);
+          geoA.setVertices(roomA.floorPolygon);
         }
         
         modified = true;
@@ -106,8 +106,8 @@ class RoomJoiningService {
   areRoomsAdjacent(roomEntityA: Entity, roomEntityB: Entity): boolean {
     const roomA = getRoomComponent(roomEntityA);
     const roomB = getRoomComponent(roomEntityB);
-    const assemblyA = roomEntityA.get(AssemblyComponent);
-    const assemblyB = roomEntityB.get(AssemblyComponent);
+    const assemblyA = roomEntityA.get(AssemblyComponent) as AssemblyComponent;
+    const assemblyB = roomEntityB.get(AssemblyComponent) as AssemblyComponent;
     
     if (!roomA || !roomB || !assemblyA || !assemblyB) {
       return false;
