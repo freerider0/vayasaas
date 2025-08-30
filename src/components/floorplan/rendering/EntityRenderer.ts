@@ -125,16 +125,19 @@ export class EntityRenderer {
       ctx.fill();
     }
     
-    // Draw stroke (with selection highlight)
-    if (style.stroke) {
-      // Check if we need to highlight specific edges
-      const selectedEdgeIndex = isBeingEdited ? editingState.selectedEdgeIndex : null;
-      const selectedEdgeIndices = isBeingEdited ? editingState.selectedEdgeIndices : [];
+    // REMOVED: Stroke rendering for room edges
+    // Walls are now rendered as separate entities
+    // Only render selection highlights when room is being edited
+    
+    // Keep edge highlighting only when room is being edited
+    if (isBeingEdited && style.stroke) {
+      const selectedEdgeIndex = editingState.selectedEdgeIndex;
+      const selectedEdgeIndices = editingState.selectedEdgeIndices || [];
       
       if (selectedEdgeIndex !== null || selectedEdgeIndices.length > 0) {
-        // Draw edges individually to allow per-edge coloring
-        ctx.lineWidth = style.stroke.width;
-        ctx.globalAlpha = style.opacity || 1;
+        // Draw only selected edges for editing feedback
+        ctx.lineWidth = 4;
+        ctx.globalAlpha = 0.6;
         
         for (let i = 0; i < geometry.vertices.length; i++) {
           const nextI = (i + 1) % geometry.vertices.length;
@@ -142,30 +145,15 @@ export class EntityRenderer {
           // Check if this edge is selected
           const isEdgeSelected = i === selectedEdgeIndex || selectedEdgeIndices.includes(i);
           
-          // Set color based on selection - orange for selected edges
-          ctx.strokeStyle = isEdgeSelected ? '#ff6b00' : style.stroke.color;
-          ctx.lineWidth = isEdgeSelected ? 4 : style.stroke.width;
-          
-          ctx.beginPath();
-          ctx.moveTo(geometry.vertices[i].x, geometry.vertices[i].y);
-          ctx.lineTo(geometry.vertices[nextI].x, geometry.vertices[nextI].y);
-          ctx.stroke();
-        }
-      } else {
-        // Draw entire polygon with single color
-        ctx.strokeStyle = isSelected ? '#3b82f6' : style.stroke.color;
-        ctx.lineWidth = isSelected ? 3 : style.stroke.width;
-        ctx.globalAlpha = style.opacity || 1;
-        
-        ctx.beginPath();
-        if (geometry.vertices.length > 0) {
-          ctx.moveTo(geometry.vertices[0].x, geometry.vertices[0].y);
-          for (let i = 1; i < geometry.vertices.length; i++) {
-            ctx.lineTo(geometry.vertices[i].x, geometry.vertices[i].y);
+          if (isEdgeSelected) {
+            // Highlight selected edges in orange
+            ctx.strokeStyle = '#ff6b00';
+            ctx.beginPath();
+            ctx.moveTo(geometry.vertices[i].x, geometry.vertices[i].y);
+            ctx.lineTo(geometry.vertices[nextI].x, geometry.vertices[nextI].y);
+            ctx.stroke();
           }
-          ctx.closePath();
         }
-        ctx.stroke();
       }
     }
     

@@ -1,19 +1,12 @@
 import { Component } from '../core/Component';
 
-export interface HierarchyComponent extends Component {
+export class HierarchyComponent {
+  id: string;
+  enabled: boolean;
   parent?: string; // Entity ID of parent
   children: string[]; // Entity IDs of children
   zIndex: number; // Z-order for rendering
   layer: number; // Layer for grouping (0 = default, higher = on top)
-}
-
-export class HierarchyComponentImpl {
-  id: string;
-  enabled: boolean;
-  parent?: string;
-  children: string[];
-  zIndex: number;
-  layer: number;
 
   constructor(zIndex: number = 0, layer: number = 0) {
     this.id = crypto.randomUUID();

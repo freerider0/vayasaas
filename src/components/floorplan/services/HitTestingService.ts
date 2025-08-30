@@ -1,7 +1,6 @@
 import { Entity } from '../core/Entity';
 import { World } from '../core/World';
-import { AssemblyComponent, InteractableComponent, GeometryComponent } from '../components';
-import { HierarchyComponentImpl } from '../components/HierarchyComponent';
+import { AssemblyComponent, InteractableComponent, GeometryComponent, HierarchyComponent } from '../components';
 import { Point } from '../components/GeometryComponent';
 import { SpatialQuery, BoundingBox } from '../spatial/SpatialQuery';
 
@@ -31,7 +30,8 @@ export class HitTestingService {
     // Filter to only interactable entities
     const interactableEntities = entitiesAtPoint.filter(entity => {
       const interactable = entity.get(InteractableComponent) as InteractableComponent;
-      return interactable && !interactable.locked;
+      const isInteractable = interactable && !interactable.locked;
+      return isInteractable;
     });
 
     if (interactableEntities.length === 0) {
@@ -45,7 +45,7 @@ export class HitTestingService {
     sortedEntities.forEach((entity, index) => {
       const geometry = entity.get(GeometryComponent) as GeometryComponent;
       const geometryType = geometry?.type || 'unknown';
-      const hierarchy = entity.get(HierarchyComponentImpl) as HierarchyComponentImpl;
+      const hierarchy = entity.get(HierarchyComponent) as HierarchyComponent;
       const zIndex = hierarchy?.zIndex || 0;
       const layer = hierarchy?.layer || 0;
     });
@@ -122,8 +122,8 @@ export class HitTestingService {
    */
   private static sortEntitiesByZOrder(entities: Entity[]): Entity[] {
     return entities.sort((a, b) => {
-      const hierarchyA = a.get(HierarchyComponentImpl) as HierarchyComponentImpl;
-      const hierarchyB = b.get(HierarchyComponentImpl) as HierarchyComponentImpl;
+      const hierarchyA = a.get(HierarchyComponent) as HierarchyComponent;
+      const hierarchyB = b.get(HierarchyComponent) as HierarchyComponent;
       
       // Entities without hierarchy go to the back
       if (!hierarchyA && !hierarchyB) return 0;

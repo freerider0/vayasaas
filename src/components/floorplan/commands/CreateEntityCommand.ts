@@ -182,7 +182,7 @@ export class CreateEntityCommand extends BaseCommand<string> {
     const thickness = this.config.metadata?.thickness || 10;
     const wallType = this.config.metadata?.wallType || 'interior';
     const wall = new WallComponent(wallType, startPoint, endPoint, thickness);
-    wall.height = this.config.metadata?.height || 300;
+    wall.height = this.config.metadata?.height || 3.0; // Height in meters
     entity.add(WallComponent as any, wall);
     
     // Style

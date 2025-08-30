@@ -1,4 +1,4 @@
-import { System } from '../core/System';
+import { BaseSystem } from '../core/System';
 import { World } from '../core/World';
 import { Entity } from '../core/Entity';
 import { GeometryComponent, Point, Constraint, Edge } from '../components/GeometryComponent';
@@ -6,20 +6,23 @@ import { AssemblyComponent } from '../components/AssemblyComponent';
 import { RoomComponent } from '../components/RoomComponent';
 import { StyleComponent } from '../components/StyleComponent';
 import { InteractableComponent } from '../components/InteractableComponent';
-import { canvasEventBus } from '../../../lib/canvas/events/CanvasEventBus';
+// Event bus removed - using direct method calls
 import { $toolMode, $editorMode, $editingState, $gridConfig, ToolMode, EditorMode, enterFocusMode, exitFocusMode } from '../stores/canvasStore';
 import { snappingService } from '../services/SnappingService';
 import { renderManagerService } from '../services/RenderManagerService';
 import { NiceConstraintSolver, Primitive, PointPrimitive, LinePrimitive } from '../../../lib/geometry/NiceConstraintSolver';
 import { ensureCounterClockwiseWinding } from '../utils/geometryConversions';
 import { GeometryBuilder } from '../builders/GeometryBuilder';
+import { wallGenerationService } from '../services/WallGenerationService';
+import { wallPolygonService } from '../services/WallPolygonService';
+import { hasRoomComponent } from '../utils/componentHelpers';
 
 /**
- * GeometrySystem - Event-based system for handling all geometry operations in local space
+ * GeometrySystem - Handles all geometry operations in local space
  * Uses nanostores for state management - no local state duplication
  */
-export class GeometrySystemEventBased implements System {
-  id: string = 'GeometrySystemEventBased';
+export class GeometrySystem extends BaseSystem {
+  id: string = 'GeometrySystem';
   enabled: boolean = true;
   updateOrder: number = 10; // Process geometry before assembly
   
@@ -32,6 +35,21 @@ export class GeometrySystemEventBased implements System {
   // Keep reference to selected room entity
   private selectedRoom: Entity | null = null;
   
+  /**
+   * Regenerate walls and centerline for a room after geometry changes
+   */
+  private regenerateWallsForRoom(roomEntity: Entity, world: World): void {
+    const room = roomEntity.get(RoomComponent as any) as RoomComponent;
+    if (!room) return;
+    
+    // Recalculate centerline polygon
+    wallPolygonService.updateRoomCenterline(room);
+    
+    // Regenerate walls
+    const allRooms = world.entitiesMatching((e: Entity) => hasRoomComponent(e));
+    wallGenerationService.generateWallsForRoom(roomEntity, world, allRooms);
+  }
+  
   // Track multiple selections locally (derived from single selections in store)
   private selectedVertexIndices: Set<number> = new Set();
   private selectedEdgeIndices: Set<number> = new Set();
@@ -39,101 +57,12 @@ export class GeometrySystemEventBased implements System {
   private world: World | null = null;
 
   constructor() {
-    this.subscribeToEvents();
+    super();
     this.setupModeChangeListener();
   }
 
-  private subscribeToEvents(): void {
-    // Listen for edit mode start
-    canvasEventBus.on('room:edit:start' as any, (event: any) => {
-      if (event.entity && event.world) {
-        this.selectRoom(event.entity, event.world);
-      }
-    });
-    
-    // Listen for high-level vertex events from InputService
-    canvasEventBus.on('vertex:select', (event) => {
-      if (event.multi) {
-        this.toggleVertexSelection(event.vertexIndex, event.world);
-      } else {
-        this.selectVertex(event.vertexIndex, event.world);
-      }
-    });
-    
-    canvasEventBus.on('vertex:drag:start', (event) => {
-      this.startVertexDrag(event.vertexIndex, event.world);
-    });
-    
-    canvasEventBus.on('vertex:drag:update', (event) => {
-      this.updateVertexPosition(event.point, event.world);
-    });
-    
-    canvasEventBus.on('vertex:drag:end', (_event) => {
-      this.endVertexDrag(_event.world);
-    });
-    
-    // Listen for high-level edge events from InputService
-    canvasEventBus.on('edge:select', (event) => {
-      if (event.multi) {
-        this.toggleEdgeSelection(event.edgeIndex, event.world);
-      } else {
-        this.selectEdge(event.edgeIndex, event.world);
-      }
-    });
-    
-    canvasEventBus.on('edge:drag:start', (event) => {
-      this.startEdgeDrag(event.startPoint, event.world);
-    });
-    
-    canvasEventBus.on('edge:drag:update', (event) => {
-      this.updateEdgePosition(event.point, event.world);
-    });
-    
-    canvasEventBus.on('edge:drag:end', (_event) => {
-      this.endEdgeDrag(_event.world);
-    });
-    
-    // Listen for vertex add event
-    canvasEventBus.on('vertex:add', (event) => {
-      this.addVertexAtPoint(event.point, event.world);
-    });
-
-    // Listen for constraint events
-    canvasEventBus.on('constraint:add', (event) => {
-      this.addConstraint(event.entityId, event.constraint);
-    });
-
-    canvasEventBus.on('constraint:remove', (event) => {
-      this.removeConstraint(event.entityId, event.constraintId);
-    });
-
-    // Listen for immediate solve requests
-    canvasEventBus.on('constraint:solve:immediate' as any, async (event: any) => {
-      if (event.entity) {
-        console.log('[GeometrySystem] Received immediate solve request for entity:', event.entity.id);
-        
-        // Set world reference if provided
-        if (event.world) {
-          this.world = event.world;
-        }
-        
-        // Set selected room if it matches
-        const editingState = $editingState.get();
-        if (editingState.roomId === event.entity.id) {
-          this.selectedRoom = event.entity;
-        }
-        
-        // Solve constraints
-        await this.solveEntityImmediate(event.entity);
-        
-        // Force render update
-        if (event.world) {
-          event.world.updateEntity(event.entity);
-          // World update will trigger render automatically
-        }
-      }
-    });
-  }
+  // Direct method calls are used instead of events
+  // The system now exposes public methods that are called directly
   
   private setupModeChangeListener(): void {
     // Listen for editor mode changes
@@ -179,7 +108,7 @@ export class GeometrySystemEventBased implements System {
       if (geometry?.isDirty && geometry.primitives?.length > 0) {
         const hasConstraints = geometry.primitives.some(p => !['point', 'line', 'circle'].includes(p.type));
         if (hasConstraints) {
-          this.solveEntityImmediate(entity);
+          this.solveEntityImmediate(entity, world);
         }
       }
     }
@@ -310,7 +239,7 @@ export class GeometrySystemEventBased implements System {
   */
 
   // Selection management
-  private selectRoom(room: Entity, world: World): void {
+  public selectRoom(room: Entity, world: World): void {
     this.clearVertexHandles(world);
     
     this.selectedRoom = room;
@@ -332,7 +261,7 @@ export class GeometrySystemEventBased implements System {
     this.createVertexHandles(world);
   }
 
-  private selectEdge(edgeIndex: number, world?: World): void {
+  public selectEdge(edgeIndex: number, world?: World): void {
     // Clear previous selections if not multi-selecting
     this.selectedEdgeIndices.clear();
     this.selectedVertexIndices.clear();
@@ -347,15 +276,10 @@ export class GeometrySystemEventBased implements System {
     
     // Selection change will trigger render via world.updateEntity
     
-    // Emit event for UI to react
-    canvasEventBus.emit('edge:selected' as any, {
-      edgeIndex,
-      edgeIndices: Array.from(this.selectedEdgeIndices),
-      roomId: this.selectedRoom?.id
-    });
+    // UI updates handled through stores and direct method calls
   }
   
-  private toggleEdgeSelection(edgeIndex: number, world: World): void {
+  public toggleEdgeSelection(edgeIndex: number, world: World): void {
     const editState = $editingState.get();
     let newSelectedIndex = editState.selectedEdgeIndex;
     
@@ -381,14 +305,10 @@ export class GeometrySystemEventBased implements System {
     $editingState.setKey('selectedEdgeIndex', newSelectedIndex);
     $editingState.setKey('selectedEdgeIndices', Array.from(this.selectedEdgeIndices));
     
-    // Emit event
-    canvasEventBus.emit('edges:selected' as any, {
-      edgeIndices: Array.from(this.selectedEdgeIndices),
-      roomId: this.selectedRoom?.id
-    });
+    // UI updates handled through stores and direct method calls
   }
   
-  private selectVertex(vertexIndex: number, world: World): void {
+  public selectVertex(vertexIndex: number, world: World): void {
     // Clear previous selections if not multi-selecting
     this.selectedVertexIndices.clear();
     // Don't clear edge selection - keep it so edge highlight follows vertex drag
@@ -405,15 +325,10 @@ export class GeometrySystemEventBased implements System {
     $editingState.setKey('selectedVertexIndex', vertexIndex);
     $editingState.setKey('selectedVertexIndices', [vertexIndex]);
     
-    // Emit event
-    canvasEventBus.emit('vertex:selected' as any, {
-      vertexIndex,
-      vertexIndices: [vertexIndex],
-      roomId: this.selectedRoom?.id
-    });
+    // UI updates handled through stores and direct method calls
   }
   
-  private toggleVertexSelection(vertexIndex: number, world: World): void {
+  public toggleVertexSelection(vertexIndex: number, world: World): void {
     const editState = $editingState.get();
     let newSelectedIndex = editState.selectedVertexIndex;
     
@@ -440,11 +355,7 @@ export class GeometrySystemEventBased implements System {
     $editingState.setKey('selectedVertexIndex', newSelectedIndex);
     $editingState.setKey('selectedVertexIndices', Array.from(this.selectedVertexIndices));
     
-    // Emit event
-    canvasEventBus.emit('vertices:selected' as any, {
-      vertexIndices: Array.from(this.selectedVertexIndices),
-      roomId: this.selectedRoom?.id
-    });
+    // UI updates handled through stores and direct method calls
   }
 
   private clearSelection(world: World): void {
@@ -471,7 +382,7 @@ export class GeometrySystemEventBased implements System {
   }
 
   // Vertex operations
-  private startVertexDrag(vertexIndex: number, world: World): void {
+  public startVertexDrag(vertexIndex: number, world: World): void {
     if (!this.selectedRoom) return;
 
     const geometry = this.selectedRoom.get(GeometryComponent) as GeometryComponent | undefined;
@@ -508,13 +419,13 @@ export class GeometrySystemEventBased implements System {
     
     constraintsToRemove.forEach((c: any) => geometry.removeConstraint(c.id));
     
-    console.log(`[GeometrySystem] Removed ${constraintsToRemove.length} constraints for edges ${prevEdgeIndex} and ${currEdgeIndex} when dragging vertex ${vertexIndex}`);
+    // Removed constraints for dragging vertex
     
     this.updateVertexHandlePositions(world);
     // Vertex drag start will trigger render via updateVertexHandlePositions
   }
 
-  private updateVertexPosition(point: Point, world: World): void {
+  public updateVertexPosition(point: Point, world: World): void {
     const editState = $editingState.get();
     if (!this.selectedRoom || editState.selectedVertexIndex === null) return;
 
@@ -573,15 +484,12 @@ export class GeometrySystemEventBased implements System {
     if (this.validateGeometryTopology(geometry)) {
       const hasConstraints = geometry.primitives.some(p => !['point', 'line', 'circle'].includes(p.type));
       if (hasConstraints) {
-        this.solveEntityImmediate(this.selectedRoom);
+        this.solveEntityImmediate(this.selectedRoom, world);
       }
       world.updateEntity(this.selectedRoom);
       
-      // Emit room:modified event to trigger offset polygon recalculation
-      canvasEventBus.emit('room:modified' as any, {
-        entity: this.selectedRoom,
-        world: world
-      });
+      // Regenerate walls after vertex movement
+      this.regenerateWallsForRoom(this.selectedRoom, world);
     } else {
       // Revert if invalid
       geometry.setVertices($editingState.get().originalVertices);
@@ -589,7 +497,7 @@ export class GeometrySystemEventBased implements System {
     }
   }
 
-  private endVertexDrag(_world: World): void {
+  public endVertexDrag(world: World): void {
     if (!this.selectedRoom) return;
 
     $editingState.get().isDraggingVertex = false;
@@ -601,7 +509,7 @@ export class GeometrySystemEventBased implements System {
     if (geometry && geometry.primitives) {
       const hasConstraints = geometry.primitives.some(p => !['point', 'line', 'circle'].includes(p.type));
       if (hasConstraints) {
-        this.solveEntityImmediate(this.selectedRoom);
+        this.solveEntityImmediate(this.selectedRoom, world);
       }
     }
 
@@ -609,7 +517,7 @@ export class GeometrySystemEventBased implements System {
   }
 
   // Edge operations
-  private startEdgeDrag(point: Point, _world: World): void {
+  public startEdgeDrag(point: Point, _world: World): void {
     if (!this.selectedRoom || $editingState.get().selectedEdgeIndex === null) return;
 
     const geometry = this.selectedRoom.get(GeometryComponent) as GeometryComponent | undefined;
@@ -620,7 +528,7 @@ export class GeometrySystemEventBased implements System {
     $editingState.setKey('originalVertices', [...geometry.vertices]);
   }
 
-  private updateEdgePosition(point: Point, world: World): void {
+  public updateEdgePosition(point: Point, world: World): void {
     const editState = $editingState.get();
     if (!this.selectedRoom || editState.selectedEdgeIndex === null || !editState.edgeDragStart) return;
 
@@ -675,23 +583,23 @@ export class GeometrySystemEventBased implements System {
     // Immediately update vertex handles when edge moves
     this.updateVertexHandlePositions(world);
     
-    // Emit room:modified event to trigger offset polygon recalculation
-    canvasEventBus.emit('room:modified' as any, {
-      entity: this.selectedRoom,
-      world: world
-    });
+    // Regenerate walls after edge movement
+    this.regenerateWallsForRoom(this.selectedRoom, world);
   }
 
-  private endEdgeDrag(_world: World): void {
+  public endEdgeDrag(world: World): void {
     if (!this.selectedRoom) return;
 
     $editingState.get().isDraggingEdge = false;
     $editingState.get().edgeDragStart = null;
     $editingState.get().originalVertices = [];
+    
+    // Final wall regeneration after edge drag ends (ensures clean state)
+    this.regenerateWallsForRoom(this.selectedRoom, world);
   }
 
   // Add vertex operation
-  private addVertexAtPoint(point: Point, world: World): void {
+  public addVertexAtPoint(point: Point, world: World): void {
     if (!this.selectedRoom) return;
 
     const geometry = this.selectedRoom.get(GeometryComponent) as GeometryComponent | undefined;
@@ -731,7 +639,7 @@ export class GeometrySystemEventBased implements System {
   }
 
   // Constraint operations
-  private addConstraint(entityId: string, constraint: any): void {
+  public addConstraint(entityId: string, constraint: any): void {
     const entity = this.world?.get(entityId);
     if (!entity) return;
 
@@ -740,10 +648,14 @@ export class GeometrySystemEventBased implements System {
 
     // Convert to proper constraint primitive and add
     const constraintId = geometry.addConstraint(constraint.type, constraint);
-    this.requestSolve(entityId);
+    
+    // Solve immediately and regenerate walls
+    if (this.world) {
+      this.solveEntityImmediate(entity, this.world);
+    }
   }
 
-  private removeConstraint(entityId: string, _constraintId: string): void {
+  public removeConstraint(entityId: string, _constraintId: string): void {
     const entity = this.world?.get(entityId);
     if (!entity) return;
 
@@ -752,14 +664,16 @@ export class GeometrySystemEventBased implements System {
 
     geometry.removeConstraint(_constraintId);
     
-    // Solve immediately
-    this.solveEntityImmediate(entity);
+    // Solve immediately and regenerate walls
+    if (this.world) {
+      this.solveEntityImmediate(entity, this.world);
+    }
     // canvasEventBus.emit('constraint:removed', { entityId, constraintId });
   }
 
   // Public method for external constraint solving
   public async solveConstraints(entity: Entity, world: World): Promise<void> {
-    console.log('[GeometrySystem] solveConstraints called for entity:', entity.id);
+    // Solve constraints for entity
     this.world = world;
     
     // Ensure selectedRoom is set if this is the room being edited
@@ -768,8 +682,8 @@ export class GeometrySystemEventBased implements System {
       this.selectedRoom = entity;
     }
     
-    console.log('[GeometrySystem] Calling solveEntityImmediate');
-    await this.solveEntityImmediate(entity);
+    // Call solveEntityImmediate
+    await this.solveEntityImmediate(entity, world);
   }
 
   // Constraint solving - using immediate solving only
@@ -795,8 +709,7 @@ export class GeometrySystemEventBased implements System {
     geometry.setSolverStatus('solving');
     
     try {
-      console.log('[GeometrySystem] Starting constraint solve with', geometry.primitives.length, 'primitives');
-      console.log('[GeometrySystem] Constraints:', geometry.primitives.filter(p => !['point', 'line', 'circle'].includes(p.type)));
+      // Starting constraint solve with primitives
       
       // Sync vertices to primitives
       this.syncPrimitivesToVertices(geometry);
@@ -810,21 +723,21 @@ export class GeometrySystemEventBased implements System {
       const solveTime = performance.now() - startTime;
       
       if (solved) {
-        console.log('[GeometrySystem] Constraints solved successfully in', solveTime.toFixed(2), 'ms');
+        // Constraints solved successfully
         
         // Apply solution
         this.solver.apply_solution();
         
         // Get solved primitives and update geometry
         const solvedPrimitives = this.solver.sketch_index.get_primitives();
-        console.log('[GeometrySystem] Solved primitives:', solvedPrimitives);
+        // Got solved primitives
         
-        this.updateVerticesFromPrimitives(geometry, solvedPrimitives);
+        this.updateVerticesFromPrimitives(geometry, solvedPrimitives, entity, world);
         
         // Update room's floor polygon from solved geometry
         const oldPolygon = [...room.floorPolygon];
         room.floorPolygon = [...geometry.vertices];
-        console.log('[GeometrySystem] Updated room polygon from:', oldPolygon, 'to:', room.floorPolygon);
+        // Updated room polygon
         
         geometry.setSolverStatus('solved');
         geometry.recordSolveTime(solveTime);
@@ -838,11 +751,7 @@ export class GeometrySystemEventBased implements System {
             this.createVertexHandles(this.world);
           }
           
-          // Emit room:modified event to trigger offset polygon recalculation
-          canvasEventBus.emit('room:modified' as any, {
-            entity: entity,
-            world: this.world
-          });
+          // Offset polygon recalculation handled directly
           
           // World update will trigger render automatically
         }
@@ -858,30 +767,28 @@ export class GeometrySystemEventBased implements System {
     geometry.isDirty = false;
   }
 
-  private async solveEntityImmediate(entity: Entity): Promise<void> {
-    console.log('[GeometrySystem] solveEntityImmediate called');
+  private async solveEntityImmediate(entity: Entity, world?: World): Promise<void> {
+    // Solve entity immediate
     const geometry = entity.get(GeometryComponent) as GeometryComponent | undefined;
     const room = entity.get(RoomComponent as any) as RoomComponent | undefined;
     
     if (!geometry || !room) {
-      console.log('[GeometrySystem] No geometry or room component');
+      // No geometry or room component
       return;
     }
     
-    console.log('[GeometrySystem] Primitives:', geometry.primitives?.length, 'total');
-    console.log('[GeometrySystem] Primitives detail:', geometry.primitives);
+    // Check primitives
     
     if (!geometry.primitives || geometry.primitives.length === 0) {
-      console.log('[GeometrySystem] No primitives');
+      // No primitives
       return;
     }
     
     const hasConstraints = geometry.primitives.some(p => !['point', 'line', 'circle'].includes(p.type));
     const constraints = geometry.primitives.filter(p => !['point', 'line', 'circle'].includes(p.type));
-    console.log('[GeometrySystem] Has constraints:', hasConstraints);
-    console.log('[GeometrySystem] Constraints found:', constraints);
+    // Check for constraints
     if (!hasConstraints) {
-      console.log('[GeometrySystem] No constraints to solve');
+      // No constraints to solve
       return;
     }
 
@@ -899,14 +806,13 @@ export class GeometrySystemEventBased implements System {
       
       const solved = this.solver.solve();
       
-      console.log('[CONSTRAINT SOLVER] Solve result:', solved);
-      console.log('[CONSTRAINT SOLVER] Vertices BEFORE solve:', JSON.stringify(geometry.vertices));
+      // Solver result obtained
       
       if (solved) {
         this.solver.apply_solution();
         const solvedPrimitives = this.solver.sketch_index.get_primitives();
-        console.log('[CONSTRAINT SOLVER] Got solved primitives:', solvedPrimitives.filter(p => p.type === 'point'));
-        this.updateVerticesFromPrimitives(geometry, solvedPrimitives);
+        // Got solved primitives
+        this.updateVerticesFromPrimitives(geometry, solvedPrimitives, entity, world);
         
         // Update room's floor polygon from solved geometry
         room.floorPolygon = [...geometry.vertices];
@@ -924,13 +830,13 @@ export class GeometrySystemEventBased implements System {
           }
         }
         
-        console.log('[CONSTRAINT SOLVER] About to update entity, world exists:', !!this.world);
+        // Update entity if world exists
         if (this.world) {
-          console.log('[CONSTRAINT SOLVER] Calling world.updateEntity for entity:', entity.id);
+          // Update entity in world
           this.world.updateEntity(entity);
           
           // Force immediate render - redundant since world.updateEntity already does this
-          console.log('[CONSTRAINT SOLVER] Also forcing render directly');
+          // Force render
           renderManagerService.render();
           
           // Immediately update vertex handles and edge highlight
@@ -939,11 +845,7 @@ export class GeometrySystemEventBased implements System {
             this.updateVertexHandlePositions(this.world);
           }
           
-          // Emit room:modified event to trigger offset polygon recalculation
-          canvasEventBus.emit('room:modified' as any, {
-            entity: entity,
-            world: this.world
-          });
+          // Offset polygon recalculation handled directly
         } else {
           console.warn('[GeometrySystem] No world reference after solving!');
         }
@@ -1340,13 +1242,12 @@ export class GeometrySystemEventBased implements System {
       }
     }
     
-    console.log('[GeometrySystem] Synced primitives:', geometry.primitives.length, 'total,', 
-      geometry.primitives.filter(p => !['point', 'line', 'circle'].includes(p.type)).length, 'constraints');
+    // Synced primitives with constraints
   }
   
   // Update vertices from solved primitives - SOLVER IS SOURCE OF TRUTH
-  private updateVerticesFromPrimitives(geometry: GeometryComponent, solvedPrimitives: Primitive[]): void {
-    console.log('[CONSTRAINT SOLVER] Updating from solver with', solvedPrimitives.length, 'primitives');
+  private updateVerticesFromPrimitives(geometry: GeometryComponent, solvedPrimitives: Primitive[], entity?: Entity, world?: World): void {
+    // Update from solver primitives
     
     // The solver returns ALL primitives including constraints
     // Use the solver's state as the source of truth
@@ -1358,11 +1259,7 @@ export class GeometrySystemEventBased implements System {
     
     // Log all point primitives from solver
     const pointPrimitives = solvedPrimitives.filter(p => p.type === 'point');
-    console.log('[CONSTRAINT SOLVER] Point primitives from solver:', pointPrimitives.map(p => ({
-      id: p.id,
-      x: (p as PointPrimitive).x,
-      y: (p as PointPrimitive).y
-    })));
+    // Extract point primitives from solver
     
     for (const primitive of solvedPrimitives) {
       if (primitive.type === 'point') {
@@ -1377,16 +1274,14 @@ export class GeometrySystemEventBased implements System {
       }
     }
     
-    console.log('[CONSTRAINT SOLVER] Old vertices:', JSON.stringify(oldVertices));
-    console.log('[CONSTRAINT SOLVER] New vertices from solver:', JSON.stringify(newVertices));
+    // Compare old and new vertices
     
     // Check if vertices actually changed
     const verticesChanged = JSON.stringify(oldVertices) !== JSON.stringify(newVertices);
-    console.log('[CONSTRAINT SOLVER] Vertices changed:', verticesChanged);
+    // Check if vertices changed
     
     if (!verticesChanged) {
-      console.warn('[CONSTRAINT SOLVER] WARNING: Solver returned same vertices! Constraints may not be applied.');
-      console.log('[CONSTRAINT SOLVER] Current constraints:', solvedPrimitives.filter(p => !['point', 'line', 'circle'].includes(p.type)));
+      // Warning: Solver returned same vertices
     }
     
     // Update geometry with solved positions
@@ -1394,10 +1289,17 @@ export class GeometrySystemEventBased implements System {
     this.updateGeometryBounds(geometry);
     geometry.isDirty = false;
     
-    console.log('[CONSTRAINT SOLVER] After setVertices:', JSON.stringify(geometry.vertices));
+    // Vertices updated
+    
+    // Regenerate walls after constraint solving changes geometry
+    if (verticesChanged && entity && world) {
+      this.regenerateWallsForRoom(entity, world);
+    }
   }
 
   destroy(): void {
     this.vertexHandles.clear();
   }
 }
+
+export const geometrySystem = new GeometrySystem();

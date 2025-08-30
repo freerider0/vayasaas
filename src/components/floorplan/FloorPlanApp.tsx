@@ -13,6 +13,7 @@ import { Entity } from './core/Entity';
 import { CanvasArea } from './ui/composed/CanvasArea';
 import { ModeSelectorBar } from './ui/composed/ModeSelectorBar';
 import { ConstraintToolsPanel } from './ui/composed/ConstraintToolsPanel';
+import { WallInspector } from './ui/WallInspector';
 import { 
   RoomInfoDisplay,
   ViewControlButtons,
@@ -25,9 +26,10 @@ import { PerformanceOverlay } from './ui/PerformanceOverlay';
 
 // Services and Systems
 import { AssemblySystemEventBased } from './systems/AssemblySystemEventBased';
-import { GeometrySystemEventBased } from './systems/GeometrySystemEventBased';
+import { GeometrySystem } from './systems/GeometrySystem';
 import { SelectionSystemEventBased } from './systems/SelectionSystemEventBased';
-import { WallSystemEventBased } from './systems/WallSystemEventBased';
+import { wallGenerationService } from './services/WallGenerationService';
+import { wallPolygonService } from './services/WallPolygonService';
 import { renderManagerService } from './services/RenderManagerService';
 import { viewportController } from './services/ViewportController';
 import { roomAssemblySnapService } from './services/RoomAssemblySnapService';
@@ -44,6 +46,7 @@ import {
   $mapState,
   $viewport,
   $selectedEntities,
+  $selectedWallId,
   EditorMode,
   ToolMode,
   setGridSnapEnabled,
@@ -95,6 +98,7 @@ export const FloorPlanApp: React.FC = () => {
   const rotationState = useStore($rotationState);
   const mapState = useStore($mapState);
   const selectedEntities = useStore($selectedEntities);
+  const selectedWallId = useStore($selectedWallId);
   const viewport = useStore($viewport);
   const gridConfig = useStore($gridConfig);
   
@@ -156,7 +160,7 @@ export const FloorPlanApp: React.FC = () => {
     
     // Check if world already exists (React Strict Mode double mount protection)
     if (worldRef.current) {
-      console.log('[FloorPlanApp] World already exists, skipping initialization');
+      // World already exists, skipping initialization
       return;
     }
     
@@ -165,11 +169,11 @@ export const FloorPlanApp: React.FC = () => {
     
     // Add systems
     world.addSystem(new AssemblySystemEventBased());
-    world.addSystem(new GeometrySystemEventBased());
+    world.addSystem(new GeometrySystem());
     world.addSystem(new SelectionSystemEventBased());
-    world.addSystem(new WallSystemEventBased());
+    // WallSystemEventBased removed - walls are generated directly without events
     
-    console.log('[FloorPlanApp] World initialized with systems:', world.getAllSystems().map(s => s.id));
+    // World initialized with systems
     
     // Initialize InputService with world
     inputService.setWorld(world);
@@ -238,6 +242,17 @@ export const FloorPlanApp: React.FC = () => {
       return newMap;
     });
     
+    // Generate walls for the new room
+    const room = roomEntity.get(RoomComponent as any) as RoomComponent;
+    if (room) {
+      // Calculate centerline polygon first
+      wallPolygonService.updateRoomCenterline(room);
+      
+      // Generate walls
+      const allRooms = worldRef.current.entitiesMatching(e => e.has(RoomComponent as any));
+      wallGenerationService.generateWallsForRoom(roomEntity, worldRef.current, allRooms);
+    }
+    
     // Select the new room using the store
     $selectedEntities.set(new Set([roomId]));
     
@@ -251,12 +266,11 @@ export const FloorPlanApp: React.FC = () => {
     $editingState.setKey('vertices', vertices);
     $editingState.setKey('selectedSegment', null);
     
-    // Emit event for GeometrySystemEventBased to create vertex handles
-    canvasEventBus.emit('room:edit:start' as any, {
-      entityId: roomId,
-      entity: roomEntity,
-      world: worldRef.current
-    });
+    // Call GeometrySystem directly to create vertex handles
+    const geometrySystem = worldRef.current?.getSystem('GeometrySystem') as GeometrySystem;
+    if (geometrySystem && roomEntity) {
+      geometrySystem.selectRoom(roomEntity, worldRef.current!);
+    }
     
     // Force immediate render to show vertex handles
     setTimeout(() => {
@@ -275,6 +289,18 @@ export const FloorPlanApp: React.FC = () => {
     
     // Update vertices using helper
     updateEntityVertices(roomEntity, vertices, worldRef.current);
+    
+    // Regenerate walls after room modification
+    const room = roomEntity.get(RoomComponent as any) as RoomComponent;
+    if (room) {
+      // Recalculate centerline polygon
+      wallPolygonService.updateRoomCenterline(room);
+      
+      // Regenerate walls
+      const allRooms = worldRef.current.entitiesMatching(e => e.has(RoomComponent as any));
+      wallGenerationService.generateWallsForRoom(roomEntity, worldRef.current, allRooms);
+    }
+    
     renderManagerService.render();
   }, [selectedRoomId]);
   
@@ -315,31 +341,40 @@ export const FloorPlanApp: React.FC = () => {
   
   // Trigger immediate constraint solving using the existing system
   const triggerConstraintSolving = useCallback(async (roomId: string) => {
-    console.log('[FloorPlanApp] triggerConstraintSolving called for room:', roomId);
+    // Trigger constraint solving for room
     if (!worldRef.current) {
-      console.log('[FloorPlanApp] No world reference');
+      // No world reference
       return;
     }
     
     const roomEntity = getEntitySafe(worldRef.current, roomId);
     if (!roomEntity) {
-      console.log('[FloorPlanApp] No room entity found for:', roomId);
+      // No room entity found
       return;
     }
     
     const geometry = roomEntity.get(GeometryComponent) as GeometryComponent;
     if (geometry) {
-      console.log('[FloorPlanApp] Got geometry, marking dirty and emitting solve event');
+      // Mark geometry as dirty and solve
       // Mark geometry as dirty
       geometry.isDirty = true;
       
-      // Use event bus to trigger solve - this works reliably like vertex dragging does
-      canvasEventBus.emit('constraint:solve:immediate' as any, {
-        entity: roomEntity,
-        world: worldRef.current
-      });
+      // Call GeometrySystem directly to solve constraints
+      const geometrySystem = worldRef.current.getSystem('GeometrySystem') as GeometrySystem;
+      if (geometrySystem) {
+        await geometrySystem.solveConstraints(roomEntity, worldRef.current);
+      }
+      
+      // Also regenerate walls immediately after constraint is added
+      const room = roomEntity.get(RoomComponent as any) as RoomComponent;
+      if (room) {
+        wallPolygonService.updateRoomCenterline(room);
+        const allRooms = worldRef.current.entitiesMatching(e => e.has(RoomComponent as any));
+        wallGenerationService.generateWallsForRoom(roomEntity, worldRef.current, allRooms);
+        renderManagerService.render();
+      }
     } else {
-      console.log('[FloorPlanApp] No geometry component on entity');
+      // No geometry component on entity
     }
   }, []);
   
@@ -483,6 +518,8 @@ export const FloorPlanApp: React.FC = () => {
       setEditValue('');
       setEditPosition(null);
       setSelectedEdgeIndex(null);
+      // Clear wall selection when leaving edit mode
+      $selectedWallId.set(null);
     }
   }, [mode]);
   
@@ -555,6 +592,11 @@ export const FloorPlanApp: React.FC = () => {
           worldRef={worldRef}
           triggerConstraintSolving={triggerConstraintSolving}
         />
+      )}
+      
+      {/* Wall Inspector (right side, only in Edit mode) */}
+      {mode === EditorMode.Edit && selectedWallId && (
+        <WallInspector world={worldRef.current} />
       )}
       
       {/* Room info (top left) */}

@@ -14,4 +14,4 @@ export { WallComponent, type WallType } from './WallComponent';
 export { StyleComponent, type StrokeStyle, type FillStyle, type TextStyle } from './StyleComponent';
 export { InteractableComponent } from './InteractableComponent';
 export { TagComponent } from './TagComponent';
-export { HierarchyComponentImpl as HierarchyComponent, type HierarchyComponent as HierarchyComponentType } from './HierarchyComponent';
+export { HierarchyComponent } from './HierarchyComponent';

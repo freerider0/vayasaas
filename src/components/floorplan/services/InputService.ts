@@ -1,11 +1,14 @@
 import { canvasEventBus } from '../../../lib/canvas/events/CanvasEventBus';
-import { $toolMode, $editorMode, $editingState, ToolMode, EditorMode } from '../stores/canvasStore';
+import { $toolMode, $editorMode, $editingState, $selectedWallId, ToolMode, EditorMode } from '../stores/canvasStore';
 import { Point } from '../components/GeometryComponent';
 import { Entity } from '../core/Entity';
 import { World } from '../core/World';
 import { HitTestingService } from './HitTestingService';
 import { GeometryComponent } from '../components/GeometryComponent';
 import { AssemblyComponent } from '../components/AssemblyComponent';
+import { GeometrySystem } from '../systems/GeometrySystem';
+import { WallComponent } from '../components/WallComponent';
+import { RoomComponent } from '../components/RoomComponent';
 
 /**
  * InputService - Interprets low-level mouse events based on current app mode
@@ -81,27 +84,34 @@ export class InputService {
     // Hit testing already done, use hitEntity from event
     const { hitEntity } = event;
     
-    // In assembly mode, default behavior is to move/select rooms
+    // In assembly mode, only handle room selection (walls are not selectable)
     if (hitEntity) {
-      // Set up for potential drag
-      this.dragState.potentialAction = 'room:move';
-      this.dragState.targetEntity = hitEntity;
+      // Ignore walls in assembly mode
+      if (hitEntity.has(WallComponent as any)) {
+        return;
+      }
       
-      // Emit room select event
-      canvasEventBus.emit('room:select', {
-        room: { id: hitEntity.id, points: [] },
-        entity: hitEntity,
-        point: event.point,
-        world: event.world
-      });
-      
-      // Also emit entity select for selection system
-      canvasEventBus.emit('entity:select', {
-        entity: hitEntity,
-        point: event.point,
-        multi: event.modifiers?.shift,
-        world: event.world
-      });
+      if (hitEntity.has(RoomComponent as any)) {
+        // Set up for potential drag
+        this.dragState.potentialAction = 'room:move';
+        this.dragState.targetEntity = hitEntity;
+        
+        // Emit room select event
+        canvasEventBus.emit('room:select', {
+          room: { id: hitEntity.id, points: [] },
+          entity: hitEntity,
+          point: event.point,
+          world: event.world
+        });
+        
+        // Also emit entity select for selection system
+        canvasEventBus.emit('entity:select', {
+          entity: hitEntity,
+          point: event.point,
+          multi: event.modifiers?.shift,
+          world: event.world
+        });
+      }
     } else {
       // Clicking on empty space in assembly mode clears selection
       canvasEventBus.emit('selection:clear', {
@@ -132,6 +142,21 @@ export class InputService {
   private handleEditModeMouseDown(event: any, tool: ToolMode, editingState: any): void {
     if (tool !== ToolMode.EditRoom) return;
     
+    // Check if a wall was clicked
+    if (event.hitEntity && event.hitEntity.has(WallComponent as any)) {
+      // Select the wall in Edit mode
+      $selectedWallId.set(event.hitEntity.id);
+      
+      // Also emit entity select for selection system
+      canvasEventBus.emit('entity:select', {
+        entity: event.hitEntity,
+        point: event.point,
+        multi: event.modifiers?.shift,
+        world: event.world
+      });
+      return;
+    }
+    
     // Check what was clicked
     if (event.hitEntity?.name?.startsWith('vertex_handle_')) {
       const vertexIndex = parseInt(event.hitEntity.name.replace('vertex_handle_', ''), 10);
@@ -139,13 +164,15 @@ export class InputService {
         this.dragState.potentialAction = 'vertex:drag';
         this.dragState.targetIndex = vertexIndex;
         
-        canvasEventBus.emit('vertex:select', {
-          vertexIndex,
-          entity: editingState.roomId,
-          point: event.point,
-          multi: event.modifiers?.shift,
-          world: event.world
-        });
+        // Call GeometrySystem directly
+        const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+        if (geometrySystem && this.world) {
+          if (event.modifiers?.shift) {
+            geometrySystem.toggleVertexSelection(vertexIndex, this.world);
+          } else {
+            geometrySystem.selectVertex(vertexIndex, this.world);
+          }
+        }
       }
     } else {
       // Check for vertex by position
@@ -154,13 +181,15 @@ export class InputService {
         this.dragState.potentialAction = 'vertex:drag';
         this.dragState.targetIndex = vertexInfo.index;
         
-        canvasEventBus.emit('vertex:select', {
-          vertexIndex: vertexInfo.index,
-          entity: editingState.roomId,
-          point: event.point,
-          multi: event.modifiers?.shift,
-          world: event.world
-        });
+        // Call GeometrySystem directly
+        const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+        if (geometrySystem && this.world) {
+          if (event.modifiers?.shift) {
+            geometrySystem.toggleVertexSelection(vertexInfo.index, this.world);
+          } else {
+            geometrySystem.selectVertex(vertexInfo.index, this.world);
+          }
+        }
       } else {
         // Check for edge
         const edgeInfo = this.findEdgeAt(event.point, editingState);
@@ -169,14 +198,19 @@ export class InputService {
             this.dragState.potentialAction = 'edge:drag';
             this.dragState.targetIndex = edgeInfo.index;
           } else {
-            canvasEventBus.emit('edge:select', {
-              edgeIndex: edgeInfo.index,
-              entity: editingState.roomId,
-              point: event.point,
-              multi: event.modifiers?.shift,
-              world: event.world
-            });
+            // Call GeometrySystem directly
+            const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+            if (geometrySystem && this.world) {
+              if (event.modifiers?.shift) {
+                geometrySystem.toggleEdgeSelection(edgeInfo.index, this.world);
+              } else {
+                geometrySystem.selectEdge(edgeInfo.index, this.world);
+              }
+            }
           }
+        } else {
+          // Clicked on empty space in edit mode - clear wall selection
+          $selectedWallId.set(null);
         }
       }
     }
@@ -206,21 +240,21 @@ export class InputService {
           
         case 'vertex:drag':
           if (this.dragState.targetIndex !== null && this.dragState.startPoint) {
-            canvasEventBus.emit('vertex:drag:start', {
-              vertexIndex: this.dragState.targetIndex,
-              startPoint: this.dragState.startPoint,
-              world: event.world
-            });
+            // Call GeometrySystem directly
+            const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+            if (geometrySystem && this.world) {
+              geometrySystem.startVertexDrag(this.dragState.targetIndex, this.world);
+            }
           }
           break;
           
         case 'edge:drag':
           if (this.dragState.targetIndex !== null && this.dragState.startPoint) {
-            canvasEventBus.emit('edge:drag:start', {
-              edgeIndex: this.dragState.targetIndex,
-              startPoint: this.dragState.startPoint,
-              world: event.world
-            });
+            // Call GeometrySystem directly
+            const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+            if (geometrySystem && this.world && this.dragState.startPoint) {
+              geometrySystem.startEdgeDrag(this.dragState.startPoint, this.world);
+            }
           }
           break;
       }
@@ -239,21 +273,21 @@ export class InputService {
           
         case 'vertex:drag':
           if (this.dragState.targetIndex !== null) {
-            canvasEventBus.emit('vertex:drag:update', {
-              vertexIndex: this.dragState.targetIndex,
-              point: event.point,
-              world: event.world
-            });
+            // Call GeometrySystem directly
+            const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+            if (geometrySystem && this.world) {
+              geometrySystem.updateVertexPosition(event.point, this.world);
+            }
           }
           break;
           
         case 'edge:drag':
           if (this.dragState.targetIndex !== null) {
-            canvasEventBus.emit('edge:drag:update', {
-              edgeIndex: this.dragState.targetIndex,
-              point: event.point,
-              world: event.world
-            });
+            // Call GeometrySystem directly
+            const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+            if (geometrySystem && this.world) {
+              geometrySystem.updateEdgePosition(event.point, this.world);
+            }
           }
           break;
       }
@@ -284,21 +318,21 @@ export class InputService {
           
         case 'vertex:drag':
           if (this.dragState.targetIndex !== null) {
-            canvasEventBus.emit('vertex:drag:end', {
-              vertexIndex: this.dragState.targetIndex,
-              point: event.point,
-              world: event.world
-            });
+            // Call GeometrySystem directly
+            const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+            if (geometrySystem && this.world) {
+              geometrySystem.endVertexDrag(this.world);
+            }
           }
           break;
           
         case 'edge:drag':
           if (this.dragState.targetIndex !== null) {
-            canvasEventBus.emit('edge:drag:end', {
-              edgeIndex: this.dragState.targetIndex,
-              point: event.point,
-              world: event.world
-            });
+            // Call GeometrySystem directly
+            const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+            if (geometrySystem && this.world) {
+              geometrySystem.endEdgeDrag(this.world);
+            }
           }
           break;
       }

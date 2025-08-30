@@ -95,12 +95,11 @@ export function ModeSelectorBar({
               setMode(EditorMode.Edit);
               $toolMode.set(ToolMode.EditRoom);
               
-              // Emit event for GeometrySystemEventBased
-              canvasEventBus.emit('room:edit:start' as any, {
-                entityId: selectedRoomId,
-                entity: roomEntity,
-                world: worldRef.current
-              });
+              // Call GeometrySystem directly
+              const geometrySystem = worldRef.current?.getSystem('GeometrySystem') as any;
+              if (geometrySystem && roomEntity) {
+                geometrySystem.selectRoom(roomEntity, worldRef.current!);
+              }
               
               renderManagerService.render();
             }

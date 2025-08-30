@@ -99,12 +99,12 @@ export class SelectionSystemEventBased implements System {
     const { point, world, hitEntity, modifiers } = event;
     this.world = world;
 
-    console.log('[SelectionSystem] Mouse down - hitEntity:', hitEntity?.id);
+    // Mouse down - check hit entity
 
     if (hitEntity) {
       // Check if this is rotation-related - if so, don't handle it
       if (hitEntity.id === 'rotation_handle' || hitEntity.id === 'rotation_knob') {
-        console.log('[SelectionSystem] Ignoring rotation entity click:', hitEntity.id);
+        // Ignoring rotation entity click
         return; // Let AssemblySystemEventBased handle it
       }
       
@@ -125,7 +125,7 @@ export class SelectionSystemEventBased implements System {
       // 2. Edit mode with Select tool
       if (currentMode === EditorMode.Assembly || 
           (currentMode === EditorMode.Edit && currentTool === ToolMode.Select)) {
-        console.log('[SelectionSystem] Starting rectangle selection - clearing all');
+        // Starting rectangle selection - clearing all
         this.isDragging = true;
         this.selectionRect = { start: point, end: point, mode: 'contain' };
         if (!modifiers?.shift && !modifiers?.ctrl) {
@@ -156,7 +156,7 @@ export class SelectionSystemEventBased implements System {
       if (currentMode === EditorMode.Assembly) {
         // Double-click in Assembly mode: enter Edit mode for the clicked room
         if (hitEntity.has(RoomComponent as any)) {
-          console.log('[SelectionSystem] Double-click in Assembly mode - entering Edit mode for room:', hitEntity.id);
+          // Double-click in Assembly mode - entering Edit mode
           
           // Get room data for editing
           const assembly = hitEntity.get(AssemblyComponent);
@@ -188,12 +188,11 @@ export class SelectionSystemEventBased implements System {
               this.updateStore();
             }
             
-            // Emit event for GeometrySystemEventBased
-            canvasEventBus.emit('room:edit:start' as any, {
-              entityId: hitEntity.id,
-              entity: hitEntity,
-              world: world
-            });
+            // Call GeometrySystem directly
+            const geometrySystem = world.getSystem('GeometrySystem') as any;
+            if (geometrySystem) {
+              geometrySystem.selectRoom(hitEntity, world);
+            }
           }
         }
       } else if (currentMode === EditorMode.Edit) {
@@ -201,14 +200,13 @@ export class SelectionSystemEventBased implements System {
         
         if (hitEntity.id === editingRoomId) {
           // Double-click on the currently editing room: add vertex near edge
-          console.log('[SelectionSystem] Double-click on editing room - emitting vertex add event');
+          // Double-click on editing room - add vertex
           
-          // Emit event for GeometrySystemEventBased to handle vertex addition
-          canvasEventBus.emit('vertex:add', {
-            point: point,
-            entityId: editingRoomId,
-            world: world
-          });
+          // Call GeometrySystem directly to handle vertex addition
+          const geometrySystem = world.getSystem('GeometrySystem') as any;
+          if (geometrySystem) {
+            geometrySystem.addVertexAtPoint(point, world);
+          }
         } else if (hitEntity.has(RoomComponent as any)) {
           // Double-click on a different room: switch to editing that room
           console.log('[SelectionSystem] Double-click on different room - switching edit target to:', hitEntity.id);

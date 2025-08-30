@@ -13,6 +13,14 @@ export interface Connection {
   type: 'wall' | 'door' | 'opening';
 }
 
+export interface AssemblyVertex {
+  edgeIndex: number;      // Which edge this vertex is on
+  t: number;              // Position along edge (0-1)
+  position: Point;        // World position
+  connectedRoomId: string; // Room creating this T-junction
+  type: 'T-junction';     // Type of assembly vertex
+}
+
 /**
  * Component for positioning and orienting entities in world space
  * Renamed from TransformComponent to better reflect its purpose
@@ -22,6 +30,7 @@ export class AssemblyComponent extends BaseComponent {
   rotation: number = 0; // Radians
   scale: number = 1;
   connections: Connection[] = [];
+  assemblyVertices: AssemblyVertex[] = []; // Assembly vertices for T-junctions (not geometry)
   gridAlignment?: Point;
 
   constructor(position?: Point, rotation?: number, scale?: number) {

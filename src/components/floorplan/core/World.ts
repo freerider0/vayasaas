@@ -23,14 +23,14 @@ export class World {
   add(entity: Entity): void {
     this.entities.set(entity.id, entity);
     this.updateCounter++;
-    
+
     // Notify systems
     for (const system of this.systems) {
       if (system.entityAdded) {
         system.entityAdded(entity, this);
       }
     }
-    
+
     // Emit entity change event
     canvasEventBus.emit('world:entity:changed' as any, { type: 'add', worldId: this.id });
   }
@@ -38,34 +38,32 @@ export class World {
   remove(entityId: string): void {
     const entity = this.entities.get(entityId);
     if (!entity) return;
-    
+
     this.entities.delete(entityId);
     this.updateCounter++;
-    
+
     // Notify systems
     for (const system of this.systems) {
       if (system.entityRemoved) {
         system.entityRemoved(entity, this);
       }
     }
-    
+
     // Emit entity change event
     canvasEventBus.emit('world:entity:changed' as any, { type: 'remove', worldId: this.id });
   }
 
   updateEntity(entity: Entity): void {
-    console.log('[World] updateEntity called for entity:', entity.id);
     this.entities.set(entity.id, entity);
     this.updateCounter++;
-    
+
     // Direct command to render using callback - no circular dependency!
-    console.log('[World] About to call render callback, exists:', !!this.renderCallback);
     if (this.renderCallback) {
       this.renderCallback();
     } else {
       console.warn('[World] No render callback set!');
     }
-    
+
     // Still emit event for other systems that might need it
     canvasEventBus.emit('world:entity:changed' as any, { type: 'update', worldId: this.id });
   }
@@ -103,7 +101,7 @@ export class World {
       this.systems.splice(index, 1);
     }
   }
-  
+
   getSystem(systemId: string): System | undefined;
   getSystem<T extends System>(systemType: new () => T): T | undefined;
   getSystem<T extends System>(arg: string | (new () => T)): System | T | undefined {

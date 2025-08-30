@@ -17,11 +17,11 @@ class WallPolygonService {
     if (!floorPolygon || floorPolygon.length < 3) {
       return floorPolygon;
     }
-    
+
     // Offset outward by 5cm (half of interior wall thickness)
     return offsetPolygon(floorPolygon, CENTERLINE_OFFSET);
   }
-  
+
   /**
    * Calculate the external polygon for a room
    * This polygon includes the full wall thickness
@@ -30,33 +30,21 @@ class WallPolygonService {
     if (!floorPolygon || floorPolygon.length < 3) {
       return floorPolygon;
     }
-    
+
     // Offset outward by exterior wall thickness (30cm)
     return offsetPolygon(floorPolygon, EXTERIOR_WALL_THICKNESS);
   }
-  
+
   /**
    * Update all polygons for a room component
    */
   updateRoomCenterline(room: RoomComponent): void {
     room.centerlinePolygon = this.calculateCenterlinePolygon(room.floorPolygon);
     room.externalPolygon = this.calculateExternalPolygon(room.floorPolygon);
-    
+
     // Debug: Log polygon sizes to verify offsets
-    console.log('[WallPolygonService] Room polygons updated:', {
-      roomName: room.name,
-      floorVertices: room.floorPolygon.length,
-      centerlineOffset: CENTERLINE_OFFSET,
-      externalOffset: EXTERIOR_WALL_THICKNESS,
-      sample: room.floorPolygon[0] ? {
-        floor: room.floorPolygon[0],
-        centerline: room.centerlinePolygon?.[0],
-        external: room.externalPolygon?.[0]
-      } : null,
-      timestamp: new Date().toISOString()
-    });
   }
-  
+
   /**
    * Calculate the outer boundary polygon for a given wall thickness
    * This is used for visualization and collision detection
@@ -65,31 +53,31 @@ class WallPolygonService {
     if (!floorPolygon || floorPolygon.length < 3) {
       return floorPolygon;
     }
-    
+
     // Offset outward by full wall thickness
     return offsetPolygon(floorPolygon, wallThickness);
   }
-  
+
   /**
    * Transform centerline polygon from local to world coordinates
    * using room's assembly transform
    */
   centerlineToWorld(
-    centerlinePolygon: Point[], 
-    position: Point, 
-    rotation: number, 
+    centerlinePolygon: Point[],
+    position: Point,
+    rotation: number,
     scale: number
   ): Point[] {
     const cos = Math.cos(rotation);
     const sin = Math.sin(rotation);
-    
+
     return centerlinePolygon.map(vertex => {
       // Apply scale and rotation
       const scaledX = vertex.x * scale;
       const scaledY = vertex.y * scale;
       const rotatedX = scaledX * cos - scaledY * sin;
       const rotatedY = scaledX * sin + scaledY * cos;
-      
+
       // Apply translation
       return {
         x: rotatedX + position.x,
@@ -97,7 +85,7 @@ class WallPolygonService {
       };
     });
   }
-  
+
   /**
    * Check if a room has valid polygons for wall generation
    */
@@ -106,12 +94,12 @@ class WallPolygonService {
       console.warn(`Room ${room.name} has invalid floor polygon`);
       return false;
     }
-    
+
     // Ensure centerline is calculated
     if (!room.centerlinePolygon) {
       this.updateRoomCenterline(room);
     }
-    
+
     return true;
   }
 }

@@ -12,13 +12,26 @@ export const INTERIOR_WALL_THICKNESS = 10; // 10cm = 10 pixels for interior wall
 export const EXTERIOR_WALL_THICKNESS = 20; // 20cm = 20 pixels for exterior walls (reduced from 30)
 export const CENTERLINE_OFFSET = 5; // 5cm = 5 pixels offset for centerline (half of interior thickness)
 
-// Wall type colors
+// Wall thickness by type
+export const WALL_THICKNESS = {
+  exterior: 30,              // 30cm for exterior walls
+  interior_division: 10,     // 10cm for standard interior walls
+  interior_structural: 20,   // 20cm for structural interior walls  
+  interior_partition: 7,     // 7cm for light partitions
+  terrain_contact: 35,       // 35cm for ground contact walls
+  adiabatic: 25             // 25cm for adiabatic walls
+};
+
+// Wall type colors - TEMPORARY BRIGHT COLORS FOR TESTING
 export const WALL_COLORS = {
-  exterior: '#374151', // Dark gray
-  interior: '#9CA3AF', // Medium gray
-  terrain_contact: '#92400E', // Brown
-  adiabatic: '#1E40AF', // Blue
-  separation: '#7C2D12' // Dark red
+  exterior: '#FF0000',           // Bright RED for exterior walls
+  interior: '#00FF00',           // Bright GREEN (legacy)
+  interior_division: '#00FF00',   // Bright GREEN for interior walls
+  interior_structural: '#00AA00', // Darker green for structural
+  interior_partition: '#00FF88',  // Light green for partitions
+  terrain_contact: '#FF8800',     // Orange
+  adiabatic: '#0088FF',          // Bright Blue
+  separation: '#FF00FF'          // Magenta (legacy)
 };
 
 export interface TestShape {
