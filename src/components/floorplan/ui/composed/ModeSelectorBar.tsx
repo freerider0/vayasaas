@@ -102,7 +102,7 @@ export function ModeSelectorBar({
                 world: worldRef.current
               });
               
-              renderManagerService.markDirty('tool_change');
+              renderManagerService.render();
             }
           }}
           disabled={!selectedRoomId}

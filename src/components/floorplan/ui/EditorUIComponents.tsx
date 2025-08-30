@@ -9,6 +9,8 @@ import {
   $toolMode,
   $editingState,
   $viewport,
+  $gridConfig,
+  toggleGrid,
   toggleMapView,
   setMapProvider,
   setMapOpacity
@@ -88,7 +90,7 @@ export function ModeSelector({ mode, selectedRoomId, roomEntities, worldRef }: M
                       world: worldRef.current
                     });
                     
-                    renderManagerService.markDirty('tool_change');
+                    renderManagerService.render();
                   }
                 }
               }
@@ -211,6 +213,7 @@ export function ViewControls({ viewport }: ViewControlsProps) {
 // Bottom Controls Component
 interface BottomControlsProps {
   showDimensions: boolean;
+  gridVisible: boolean;
   snapEnabled: boolean;
   setSnapEnabled: (value: boolean) => void;
   orthogonalSnapEnabled: boolean;
@@ -222,6 +225,7 @@ interface BottomControlsProps {
 
 export function BottomControls({
   showDimensions,
+  gridVisible,
   snapEnabled,
   setSnapEnabled,
   orthogonalSnapEnabled,
@@ -244,14 +248,27 @@ export function BottomControls({
       </button>
       
       <button
-        onClick={() => setSnapEnabled(!snapEnabled)}
+        onClick={() => {
+          toggleGrid();
+        }}
         className={`px-4 py-2 rounded-full shadow-lg transition-all font-medium text-sm ${
-          snapEnabled 
+          gridVisible 
             ? 'bg-green-500 text-white hover:bg-green-600' 
             : 'bg-white text-gray-700 hover:bg-gray-50'
         }`}
       >
         Grid
+      </button>
+      
+      <button
+        onClick={() => setSnapEnabled(!snapEnabled)}
+        className={`px-4 py-2 rounded-full shadow-lg transition-all font-medium text-sm ${
+          snapEnabled 
+            ? 'bg-cyan-500 text-white hover:bg-cyan-600' 
+            : 'bg-white text-gray-700 hover:bg-gray-50'
+        }`}
+      >
+        Snap
       </button>
       
       <button
@@ -282,7 +299,7 @@ export function BottomControls({
           const newValue = !smartSnapEnabled;
           setSmartSnapEnabled(newValue);
           roomAssemblySnapService.setEnabled(newValue);
-          renderManagerService.markDirty('ui_change');
+          renderManagerService.render();
         }}
         className={`px-4 py-2 rounded-full shadow-lg transition-all font-medium text-sm ${
           smartSnapEnabled 

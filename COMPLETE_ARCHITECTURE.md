@@ -96,12 +96,12 @@ class GeometrySystemRefactored {
 
 ## 📊 Performance Features
 
-### Dirty Rectangle Optimization
+### Simple Canvas Rendering
 ```typescript
-// Automatically tracks changed regions
-dirtyRectManager.markEntityDirty(entity);
-dirtyRectManager.renderWithDirtyRects(ctx, renderCallback);
-// Only redraws what changed!
+// Clean and efficient for floor plan apps
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+renderEntities(ctx, world.all());
+// No complex optimization needed for low line counts
 ```
 
 ### Spatial Indexing (QuadTree)
@@ -169,10 +169,9 @@ useCanvasRender({
   world,
   renderCallback: ({ ctx, world, viewport }) => {
     // Your custom rendering
-    dirtyRectManager.renderWithDirtyRects(ctx, (ctx, region) => {
-      const entities = spatialIndex.queryBounds(region);
-      entities.forEach(e => renderEntity(ctx, e));
-    });
+    ctx.clearRect(0, 0, viewport.width, viewport.height);
+    const entities = spatialIndex.queryBounds(viewport);
+    entities.forEach(e => renderEntity(ctx, e));
   }
 });
 ```
@@ -213,7 +212,6 @@ world.addSystem(new MoveSystemRefactored());
 ### Week 4: Optimization
 ```typescript
 // Enable optimizations
-dirtyRectManager.setEnabled(true);
 canvasLayerManager.initialize(container, width, height);
 spatialIndex.rebuild(world.all());
 ```
@@ -248,7 +246,6 @@ src/components/floorplan/
 
 ```typescript
 // Enable/disable optimizations
-dirtyRectManager.setEnabled(true);
 performanceMonitor.enableOptimization('reducedQuality');
 canvasLayerManager.setLayerVisible(LayerType.Grid, false);
 

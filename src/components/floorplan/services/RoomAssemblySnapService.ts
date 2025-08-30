@@ -179,7 +179,8 @@ export class RoomAssemblySnapService {
     }
     
     const segments: LineSegment[] = [];
-    const worldVertices = assembly.localToWorld(room.floorPolygon);
+    // Convert room vertices to world coordinates
+    const worldVertices = RoomComponent.getGlobalVertices(room, assembly as AssemblyComponent);
     
     // Apply offset to vertices
     const offsetVertices = worldVertices.map(v => ({

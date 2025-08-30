@@ -185,7 +185,7 @@ export const FloorPlanApp: React.FC = () => {
     
     // Set render callback on world to avoid circular dependency
     world.setRenderCallback(() => {
-      renderManagerService.forceRender();
+      renderManagerService.render();
     });
     
     // Enable snapping services if needed
@@ -260,7 +260,7 @@ export const FloorPlanApp: React.FC = () => {
     
     // Force immediate render to show vertex handles
     setTimeout(() => {
-      renderManagerService.forceRender();
+      renderManagerService.render();
     }, 0);
         
     return roomId;
@@ -275,7 +275,7 @@ export const FloorPlanApp: React.FC = () => {
     
     // Update vertices using helper
     updateEntityVertices(roomEntity, vertices, worldRef.current);
-    renderManagerService.forceRender();
+    renderManagerService.render();
   }, [selectedRoomId]);
   
   // Delete selected room

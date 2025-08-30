@@ -931,7 +931,7 @@ export class GeometrySystemEventBased implements System {
           
           // Force immediate render - redundant since world.updateEntity already does this
           console.log('[CONSTRAINT SOLVER] Also forcing render directly');
-          renderManagerService.forceRender();
+          renderManagerService.render();
           
           // Immediately update vertex handles and edge highlight
           if (this.selectedRoom === entity) {

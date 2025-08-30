@@ -489,6 +489,14 @@ export function setGridVisible(visible: boolean): void {
   });
 }
 
+export function setGridOpacity(opacity: number): void {
+  const gridConfig = $gridConfig.get();
+  $gridConfig.set({
+    ...gridConfig,
+    opacity: Math.max(0, Math.min(1, opacity))
+  });
+}
+
 export function setGridSnapEnabled(enabled: boolean): void {
   console.log('[canvasStore] setGridSnapEnabled called with:', enabled);
   const gridConfig = $gridConfig.get();

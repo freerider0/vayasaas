@@ -240,33 +240,16 @@ class BatchCommand extends BaseCommand {
 }
 ```
 
-### 2. Dirty Rectangle Rendering
+### 2. Simple Canvas Rendering
 ```typescript
-class DirtyRectManager {
-  private dirtyRects: Set<DOMRect> = new Set();
-  
-  markDirty(rect: DOMRect): void {
-    this.dirtyRects.add(rect);
-  }
-  
+class SimpleRenderer {
   render(ctx: CanvasRenderingContext2D, world: World): void {
-    if (this.dirtyRects.size === 0) return;
+    // Clear canvas
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     
-    // Only re-render dirty areas
-    for (const rect of this.dirtyRects) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(rect.x, rect.y, rect.width, rect.height);
-      ctx.clip();
-      
-      // Render only entities in this rect
-      const entities = world.entitiesInRect(rect);
-      entities.forEach(e => RenderSystem.renderEntity(ctx, e));
-      
-      ctx.restore();
-    }
-    
-    this.dirtyRects.clear();
+    // Render all entities - efficient for floor plans with low complexity
+    const entities = world.all();
+    entities.forEach(e => RenderSystem.renderEntity(ctx, e));
   }
 }
 ```

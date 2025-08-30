@@ -55,8 +55,7 @@ export class PerformanceMonitor {
   private optimizations = {
     reducedQuality: false,
     cullingEnabled: true,
-    batchingEnabled: true,
-    dirtyRectangles: false
+    batchingEnabled: true
   };
   
   private constructor() {
@@ -230,15 +229,10 @@ export class PerformanceMonitor {
     // Enable optimizations if performance is poor
     if (metrics.fps < this.thresholds.criticalFPS) {
       this.enableOptimization('reducedQuality');
-      this.enableOptimization('dirtyRectangles');
-      console.warn('[Performance] Critical FPS - enabling all optimizations');
-    } else if (metrics.fps < this.thresholds.warningFPS) {
-      this.enableOptimization('dirtyRectangles');
-      console.warn('[Performance] Low FPS - enabling dirty rectangles');
+      console.warn('[Performance] Critical FPS - enabling optimizations');
     } else if (metrics.fps >= this.thresholds.targetFPS - 5) {
       // Disable optimizations if performance is good
       this.disableOptimization('reducedQuality');
-      this.disableOptimization('dirtyRectangles');
     }
     
     // Warn about high draw calls
@@ -328,7 +322,6 @@ export class PerformanceMonitor {
     report += `- Reduced Quality: ${optimizations.reducedQuality}\n`;
     report += `- Culling: ${optimizations.cullingEnabled}\n`;
     report += `- Batching: ${optimizations.batchingEnabled}\n`;
-    report += `- Dirty Rectangles: ${optimizations.dirtyRectangles}\n`;
     
     return report;
   }

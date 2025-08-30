@@ -104,8 +104,14 @@ export class World {
     }
   }
   
-  getSystem(systemId: string): System | undefined {
-    return this.systems.find(s => s.id === systemId);
+  getSystem(systemId: string): System | undefined;
+  getSystem<T extends System>(systemType: new () => T): T | undefined;
+  getSystem<T extends System>(arg: string | (new () => T)): System | T | undefined {
+    if (typeof arg === 'string') {
+      return this.systems.find(s => s.id === arg);
+    } else {
+      return this.systems.find(s => s.constructor.name === arg.name) as T | undefined;
+    }
   }
 
   update(deltaTime: number): void {
@@ -114,10 +120,6 @@ export class World {
         system.update(deltaTime, this);
       }
     }
-  }
-
-  getSystem<T extends System>(systemType: new () => T): T | undefined {
-    return this.systems.find(s => s.constructor.name === systemType.name) as T | undefined;
   }
 
   getAllSystems(): System[] {
