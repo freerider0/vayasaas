@@ -38,7 +38,7 @@ export function TrustSection() {
     <section className="py-16 bg-slate-50 border-y">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-8">
-          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">
+          <p className="text-sm font-medium text-gray-700 uppercase tracking-wider">
             Arquitecto Profesional Certificado
           </p>
           <h2 className="text-2xl font-bold text-gray-900 mt-2">
@@ -52,7 +52,7 @@ export function TrustSection() {
                 <credential.icon className="w-6 h-6 text-blue-600" />
               </div>
               <span className="text-sm font-semibold text-gray-900 text-center">{credential.name}</span>
-              <span className="text-xs text-gray-500 text-center">{credential.description}</span>
+              <span className="text-xs text-gray-700 text-center">{credential.description}</span>
             </div>
           ))}
         </div>

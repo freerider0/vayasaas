@@ -72,7 +72,7 @@ export function offsetPolygon(vertices: Point[], distance: number): Point[] {
 /**
  * Find intersection point of two lines
  */
-function lineIntersection(
+export function lineIntersection(
   line1: { start: Point; end: Point },
   line2: { start: Point; end: Point }
 ): Point | null {
@@ -98,6 +98,50 @@ function lineIntersection(
     x: x1 + t * (x2 - x1),
     y: y1 + t * (y2 - y1)
   };
+}
+
+/**
+ * Find intersection point of two line segments (checks if intersection is within segment bounds)
+ */
+export function segmentIntersection(
+  seg1Start: Point,
+  seg1End: Point,
+  seg2Start: Point,
+  seg2End: Point
+): Point | null {
+  const line1 = { start: seg1Start, end: seg1End };
+  const line2 = { start: seg2Start, end: seg2End };
+  
+  // Get line intersection
+  const intersection = lineIntersection(line1, line2);
+  if (!intersection) return null;
+  
+  // Check if intersection is within both segments
+  const epsilon = 0.001;
+  
+  // Check segment 1 bounds
+  const minX1 = Math.min(seg1Start.x, seg1End.x) - epsilon;
+  const maxX1 = Math.max(seg1Start.x, seg1End.x) + epsilon;
+  const minY1 = Math.min(seg1Start.y, seg1End.y) - epsilon;
+  const maxY1 = Math.max(seg1Start.y, seg1End.y) + epsilon;
+  
+  if (intersection.x < minX1 || intersection.x > maxX1 || 
+      intersection.y < minY1 || intersection.y > maxY1) {
+    return null;
+  }
+  
+  // Check segment 2 bounds
+  const minX2 = Math.min(seg2Start.x, seg2End.x) - epsilon;
+  const maxX2 = Math.max(seg2Start.x, seg2End.x) + epsilon;
+  const minY2 = Math.min(seg2Start.y, seg2End.y) - epsilon;
+  const maxY2 = Math.max(seg2Start.y, seg2End.y) + epsilon;
+  
+  if (intersection.x < minX2 || intersection.x > maxX2 || 
+      intersection.y < minY2 || intersection.y > maxY2) {
+    return null;
+  }
+  
+  return intersection;
 }
 
 /**

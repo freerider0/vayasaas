@@ -22,6 +22,7 @@ import { snappingService } from './SnappingService';
 export interface InputState {
   isMouseDown: boolean;
   isDragging: boolean;
+  isMovingRoom: boolean; // Track when room is being moved
   dragStart: Point | null;
   dragType: 'move' | 'rotate' | 'vertex' | 'edge' | null;
   dragTarget: any;
@@ -40,6 +41,7 @@ export class UnifiedInputHandler {
   private inputState: InputState = {
     isMouseDown: false,
     isDragging: false,
+    isMovingRoom: false,
     dragStart: null,
     dragType: null,
     dragTarget: null,
@@ -317,6 +319,19 @@ export class UnifiedInputHandler {
   private startDrag(): void {
     this.inputState.isDragging = true;
     
+    // Check if we're moving a room entity
+    if (this.inputState.dragType === 'move' && this.world) {
+      const selectedIds = selectionStore.getSelectedEntityIds();
+      // Check if any selected entity is a room
+      for (const id of selectedIds) {
+        const entity = this.world.get(id);
+        if (entity?.has('RoomComponent' as any)) {
+          this.inputState.isMovingRoom = true;
+          break;
+        }
+      }
+    }
+    
     // Emit drag start based on type
     console.log(`Starting ${this.inputState.dragType} drag`);
   }
@@ -414,7 +429,15 @@ export class UnifiedInputHandler {
       const selectedIds = selectionStore.getSelectedEntityIds();
       const command = new MoveEntityCommand(selectedIds, totalDelta);
       commandManager.execute(command, { world: this.world });
+      
+      // If we were moving rooms, trigger room joining for wall splitting
+      if (this.inputState.isMovingRoom) {
+        this.triggerRoomJoining(selectedIds);
+      }
     }
+    
+    // Reset room moving state
+    this.inputState.isMovingRoom = false;
   }
   
   private updateVertexDrag(worldPoint: Point): void {
@@ -472,6 +495,41 @@ export class UnifiedInputHandler {
       const entity = HitTestingService.getEntityAt(worldPoint, this.world);
       selectionStore.setHoveredEntity(entity?.id || null);
     }
+  }
+  
+  // --- Room Joining Handler ---
+  
+  private triggerRoomJoining(movedRoomIds: string[]): void {
+    if (!this.world) return;
+    
+    const { roomJoiningService } = require('./RoomJoiningService');
+    
+    // For each moved room, check for overlaps with all other rooms
+    for (const movedId of movedRoomIds) {
+      const movedEntity = this.world.get(movedId);
+      if (!movedEntity?.has('RoomComponent' as any)) continue;
+      
+      // Check against all other rooms
+      for (const entity of this.world.all()) {
+        if (entity.id === movedId) continue;
+        if (!entity.has('RoomComponent' as any)) continue;
+        
+        // Attempt to join rooms (will inject vertices for wall splitting)
+        const modified = roomJoiningService.joinRooms(movedEntity, entity);
+        if (modified) {
+          console.log(`Room joining: Split walls between room ${movedId} and ${entity.id}`);
+        }
+      }
+    }
+  }
+  
+  // --- Public Methods ---
+  
+  /**
+   * Check if currently moving a room
+   */
+  isMovingRoom(): boolean {
+    return this.inputState.isMovingRoom;
   }
   
   // --- Delete Handler ---

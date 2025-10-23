@@ -65,18 +65,18 @@ export function Navbar() {
             <NavigationMenu>
               <NavigationMenuList>
                 <NavigationMenuItem>
-                  <NavigationMenuTrigger className="bg-transparent">Certificados</NavigationMenuTrigger>
-                  <NavigationMenuContent>
-                    <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2">
+                  <NavigationMenuTrigger className="bg-transparent text-gray-700 hover:text-gray-900">Certificados</NavigationMenuTrigger>
+                  <NavigationMenuContent className="bg-white border border-gray-200 shadow-lg">
+                    <ul className="grid w-[400px] gap-3 p-4 md:w-[500px] md:grid-cols-2 bg-white">
                       {solutions.map((item) => (
                         <li key={item.title}>
                           <NavigationMenuLink asChild>
                             <a
                               href={item.href}
-                              className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
+                              className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-gray-50 focus:bg-gray-50"
                             >
-                              <div className="text-sm font-medium leading-none">{item.title}</div>
-                              <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
+                              <div className="text-sm font-medium leading-none text-gray-900">{item.title}</div>
+                              <p className="line-clamp-2 text-sm leading-snug text-gray-700">
                                 {item.description}
                               </p>
                             </a>
@@ -106,7 +106,7 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="ghost" size="sm">
+            <Button variant="ghost" size="sm" className="text-gray-700 hover:text-gray-900">
               Acceder
             </Button>
             <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700">

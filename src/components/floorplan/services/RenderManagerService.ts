@@ -8,7 +8,7 @@
  */
 
 import { World } from '../core/World';
-import { $gridConfig, $drawingState, $editingState, $rotationState } from '../stores/canvasStore';
+import { $gridConfig, $drawingState, $editingState, $rotationState, $selectedWallIds } from '../stores/canvasStore';
 
 // Import specialized renderers
 import { GridRenderer } from '../rendering/GridRenderer';
@@ -72,6 +72,7 @@ export class RenderManagerService {
     let prevDrawingState: any = null;
     let prevEditingState: any = null;
     let prevRotationState: any = null;
+    let prevSelectedWallIds: Set<string> | null = null;
 
     // Subscribe to state changes and render when needed
     this.unsubscribers.push(
@@ -107,6 +108,21 @@ export class RenderManagerService {
           this.render();
         }
         prevRotationState = state;
+      })
+    );
+
+    // Subscribe to wall selection changes for immediate selection feedback
+    this.unsubscribers.push(
+      $selectedWallIds.subscribe((selectedWallIds) => {
+        if (prevSelectedWallIds !== null) {
+          // Check if selection actually changed
+          const prev = Array.from(prevSelectedWallIds).sort();
+          const current = Array.from(selectedWallIds).sort();
+          if (JSON.stringify(prev) !== JSON.stringify(current)) {
+            this.render();
+          }
+        }
+        prevSelectedWallIds = new Set(selectedWallIds);
       })
     );
 

@@ -141,12 +141,70 @@ export class InputService {
 
   private handleEditModeMouseDown(event: any, tool: ToolMode, editingState: any): void {
     if (tool !== ToolMode.EditRoom) return;
-    
-    // Check if a wall was clicked
+
+    // PRIORITY 1: Check for vertex handles first (most specific)
+    if (event.hitEntity?.name?.startsWith('vertex_handle_')) {
+      const vertexIndex = parseInt(event.hitEntity.name.replace('vertex_handle_', ''), 10);
+      if (!isNaN(vertexIndex)) {
+        this.dragState.potentialAction = 'vertex:drag';
+        this.dragState.targetIndex = vertexIndex;
+
+        // Call GeometrySystem directly
+        const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+        if (geometrySystem && this.world) {
+          if (event.modifiers?.shift) {
+            geometrySystem.toggleVertexSelection(vertexIndex, this.world);
+          } else {
+            geometrySystem.selectVertex(vertexIndex, this.world);
+          }
+        }
+      }
+      return; // Exit early if vertex handle was clicked
+    }
+
+    // PRIORITY 2: Check for vertex by position
+    const vertexInfo = this.findVertexAt(event.point, editingState);
+    if (vertexInfo) {
+      this.dragState.potentialAction = 'vertex:drag';
+      this.dragState.targetIndex = vertexInfo.index;
+
+      // Call GeometrySystem directly
+      const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+      if (geometrySystem && this.world) {
+        if (event.modifiers?.shift) {
+          geometrySystem.toggleVertexSelection(vertexInfo.index, this.world);
+        } else {
+          geometrySystem.selectVertex(vertexInfo.index, this.world);
+        }
+      }
+      return; // Exit early if vertex was clicked
+    }
+
+    // PRIORITY 3: Check for edge
+    const edgeInfo = this.findEdgeAt(event.point, editingState);
+    if (edgeInfo) {
+      if (edgeInfo.index === editingState.selectedEdgeIndex) {
+        this.dragState.potentialAction = 'edge:drag';
+        this.dragState.targetIndex = edgeInfo.index;
+      } else {
+        // Call GeometrySystem directly
+        const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
+        if (geometrySystem && this.world) {
+          if (event.modifiers?.shift) {
+            geometrySystem.toggleEdgeSelection(edgeInfo.index, this.world);
+          } else {
+            geometrySystem.selectEdge(edgeInfo.index, this.world);
+          }
+        }
+      }
+      return; // Exit early if edge was clicked
+    }
+
+    // PRIORITY 4: Check if a wall was clicked (least specific, larger hit area)
     if (event.hitEntity && event.hitEntity.has(WallComponent as any)) {
       const wallId = event.hitEntity.id;
       const isShiftPressed = event.modifiers?.shift || false;
-      
+
       // Handle wall selection (single or multi with shift)
       const currentSelectedWalls = $selectedWallIds.get();
       if (isShiftPressed) {
@@ -162,7 +220,7 @@ export class InputService {
         // Single selection - replace current selection
         $selectedWallIds.set(new Set([wallId]));
       }
-      
+
       // Also select the wall's parent room for constraint operations
       const wallComponent = event.hitEntity.get(WallComponent as any) as WallComponent;
       if (wallComponent && wallComponent.roomId && event.world) {
@@ -171,7 +229,7 @@ export class InputService {
           ...$editingState.get(),
           roomId: wallComponent.roomId
         });
-        
+
         // Find and select the parent room entity
         const roomEntity = event.world.get(wallComponent.roomId);
         if (roomEntity) {
@@ -186,9 +244,8 @@ export class InputService {
             newSelectedEntities.add(wallComponent.roomId);
             $selectedEntities.set(newSelectedEntities);
           }
-          
-          console.log('[InputService] Wall selected, room:', wallComponent.roomId, 'multi:', isShiftPressed);
-          
+
+
           // Emit entity select for the room
           canvasEventBus.emit('entity:select', {
             entity: roomEntity,
@@ -200,64 +257,9 @@ export class InputService {
       }
       return;
     }
-    
-    // Check what was clicked
-    if (event.hitEntity?.name?.startsWith('vertex_handle_')) {
-      const vertexIndex = parseInt(event.hitEntity.name.replace('vertex_handle_', ''), 10);
-      if (!isNaN(vertexIndex)) {
-        this.dragState.potentialAction = 'vertex:drag';
-        this.dragState.targetIndex = vertexIndex;
-        
-        // Call GeometrySystem directly
-        const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
-        if (geometrySystem && this.world) {
-          if (event.modifiers?.shift) {
-            geometrySystem.toggleVertexSelection(vertexIndex, this.world);
-          } else {
-            geometrySystem.selectVertex(vertexIndex, this.world);
-          }
-        }
-      }
-    } else {
-      // Check for vertex by position
-      const vertexInfo = this.findVertexAt(event.point, editingState);
-      if (vertexInfo) {
-        this.dragState.potentialAction = 'vertex:drag';
-        this.dragState.targetIndex = vertexInfo.index;
-        
-        // Call GeometrySystem directly
-        const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
-        if (geometrySystem && this.world) {
-          if (event.modifiers?.shift) {
-            geometrySystem.toggleVertexSelection(vertexInfo.index, this.world);
-          } else {
-            geometrySystem.selectVertex(vertexInfo.index, this.world);
-          }
-        }
-      } else {
-        // Check for edge
-        const edgeInfo = this.findEdgeAt(event.point, editingState);
-        if (edgeInfo) {
-          if (edgeInfo.index === editingState.selectedEdgeIndex) {
-            this.dragState.potentialAction = 'edge:drag';
-            this.dragState.targetIndex = edgeInfo.index;
-          } else {
-            // Call GeometrySystem directly
-            const geometrySystem = this.world?.getSystem('GeometrySystem') as GeometrySystem;
-            if (geometrySystem && this.world) {
-              if (event.modifiers?.shift) {
-                geometrySystem.toggleEdgeSelection(edgeInfo.index, this.world);
-              } else {
-                geometrySystem.selectEdge(edgeInfo.index, this.world);
-              }
-            }
-          }
-        } else {
-          // Clicked on empty space in edit mode - clear wall selection
-          $selectedWallIds.set(new Set());
-        }
-      }
-    }
+
+    // PRIORITY 5: Nothing was clicked - clear wall selection
+    $selectedWallIds.set(new Set());
   }
 
   private handleMouseMove(event: any): void {

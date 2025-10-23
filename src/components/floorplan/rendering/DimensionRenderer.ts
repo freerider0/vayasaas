@@ -325,8 +325,8 @@ export class DimensionRenderer {
     viewport: Viewport,
     world?: World
   ): void {
-    // Clear label service for new render
-    dimensionLabelService.clearLabels();
+    // Labels are cleared once at the start of the render cycle in EntityRenderer
+    // Don't clear here or we'll lose labels from previously rendered rooms
     const editorMode = $editorMode.get();
     const editingState = $editingState.get();
     const isBeingEdited = editorMode === EditorMode.Edit &&
@@ -388,25 +388,41 @@ export class DimensionRenderer {
     }
 
     // Render edge dimensions
-    this.renderDimensions(ctx, viewport, worldVertices, [], wallThicknesses, entity.id);
+    this.renderDimensions(ctx, viewport, worldVertices, [], wallThicknesses, entity.id, geometry);
 
     // Render constraint indicators if we have geometry primitives
     if (geometry?.primitives) {
       const constraintTypes: any[] = [];
+      const numVertices = worldVertices.length;
+
       geometry.primitives.forEach((p: any) => {
+        // Handle horizontal and vertical constraints (both line-based and point-based)
         if (p.type === 'horizontal' || p.type === 'vertical') {
-          const edgeIndex = parseInt(p.l1_id.substring(1));
+          // Line-based constraint (uses l1_id)
+          const edgeIndex = parseInt(p.l1_id?.substring(1));
           if (!isNaN(edgeIndex)) {
             constraintTypes.push({ type: p.type, edgeIndex });
           }
+        } else if (p.type === 'horizontal_pp' || p.type === 'vertical_pp') {
+          // Point-to-point constraint - determine which edge it applies to
+          const p1Index = parseInt(p.p1_id?.substring(1));
+          const p2Index = parseInt(p.p2_id?.substring(1));
+          if (!isNaN(p1Index) && !isNaN(p2Index)) {
+            // Check if this represents an edge (consecutive vertices)
+            if (p2Index === (p1Index + 1) % numVertices) {
+              constraintTypes.push({ type: p.type, edgeIndex: p1Index });
+            } else if (p1Index === (p2Index + 1) % numVertices) {
+              constraintTypes.push({ type: p.type, edgeIndex: p2Index });
+            }
+          }
         }
+
         // Add support for p2p_distance constraints (only for non-edge constraints)
         if (p.type === 'p2p_distance' && p.p1_id && p.p2_id) {
           const p1Index = parseInt(p.p1_id.substring(1));
           const p2Index = parseInt(p.p2_id.substring(1));
           if (!isNaN(p1Index) && !isNaN(p2Index)) {
             // Check if this is NOT an edge constraint (consecutive vertices)
-            const numVertices = worldVertices.length;
             const isEdge = (p2Index === (p1Index + 1) % numVertices) ||
               (p1Index === (p2Index + 1) % numVertices);
 
@@ -436,7 +452,8 @@ export class DimensionRenderer {
     vertices: Point[],
     fixedConstraints: any[] = [],
     wallThicknesses: number[] | number = 10,
-    roomId?: string
+    roomId?: string,
+    geometry?: GeometryComponent
   ): void {
     const n = vertices.length;
 
@@ -459,6 +476,31 @@ export class DimensionRenderer {
       // Check if this edge is locked (has a fixed constraint)
       const isLocked = fixedConstraints.some(c => c.edgeIndex === i);
 
+      // Check for constraints on this edge
+      let constraintIcons = '';
+      if (geometry?.primitives) {
+        // Check for horizontal/vertical constraints
+        const hasHorizontal = geometry.primitives.some((p: any) =>
+          (p.type === 'horizontal_pp' || p.type === 'horizontal') &&
+          ((p.p1_id === `p${i}` && p.p2_id === `p${(i + 1) % n}`) ||
+           (p.p1_id === `p${(i + 1) % n}` && p.p2_id === `p${i}`))
+        );
+        const hasVertical = geometry.primitives.some((p: any) =>
+          (p.type === 'vertical_pp' || p.type === 'vertical') &&
+          ((p.p1_id === `p${i}` && p.p2_id === `p${(i + 1) % n}`) ||
+           (p.p1_id === `p${(i + 1) % n}` && p.p2_id === `p${i}`))
+        );
+        const hasDistance = geometry.primitives.some((p: any) =>
+          (p.type === 'p2p_distance' || p.type === 'distance') &&
+          ((p.p1_id === `p${i}` && p.p2_id === `p${(i + 1) % n}`) ||
+           (p.p1_id === `p${(i + 1) % n}` && p.p2_id === `p${i}`))
+        );
+
+        if (hasHorizontal) constraintIcons += ' [H]';
+        if (hasVertical) constraintIcons += ' [V]';
+        if (hasDistance) constraintIcons += ' 🔒';
+      }
+
       // Determine outward direction for this edge
       const outwardDirection = this.getOutwardDirection(vertices, i);
 
@@ -473,7 +515,7 @@ export class DimensionRenderer {
         viewport,
         v1,
         v2,
-        text,
+        text + constraintIcons,
         isLocked,
         outwardDirection,
         edgeWallThickness,
@@ -498,44 +540,88 @@ export class DimensionRenderer {
     ctx.save();
 
     constraints.forEach(constraint => {
-      if (constraint.type === 'horizontal' && constraint.edgeIndex !== undefined) {
+      if ((constraint.type === 'horizontal' || constraint.type === 'horizontal_pp') && constraint.edgeIndex !== undefined) {
         const v1 = vertices[constraint.edgeIndex];
         const v2 = vertices[(constraint.edgeIndex + 1) % vertices.length];
         const centerX = (v1.x + v2.x) / 2;
         const centerY = (v1.y + v2.y) / 2;
         const screenCenter = worldToScreen({ x: centerX, y: centerY }, viewport);
 
-        // Draw horizontal indicator
-        ctx.strokeStyle = '#10b981';
-        ctx.lineWidth = 3;
+        // Draw horizontal indicator - small icon on edge
+        ctx.save();
+        ctx.fillStyle = '#10b981';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+
+        // Draw a small rounded rectangle badge
+        const badgeX = screenCenter.x - 12;
+        const badgeY = screenCenter.y - 12;
+        const badgeW = 24;
+        const badgeH = 24;
+        const radius = 4;
+
         ctx.beginPath();
-        ctx.moveTo(screenCenter.x - 10, screenCenter.y);
-        ctx.lineTo(screenCenter.x + 10, screenCenter.y);
+        ctx.moveTo(badgeX + radius, badgeY);
+        ctx.lineTo(badgeX + badgeW - radius, badgeY);
+        ctx.quadraticCurveTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + radius);
+        ctx.lineTo(badgeX + badgeW, badgeY + badgeH - radius);
+        ctx.quadraticCurveTo(badgeX + badgeW, badgeY + badgeH, badgeX + badgeW - radius, badgeY + badgeH);
+        ctx.lineTo(badgeX + radius, badgeY + badgeH);
+        ctx.quadraticCurveTo(badgeX, badgeY + badgeH, badgeX, badgeY + badgeH - radius);
+        ctx.lineTo(badgeX, badgeY + radius);
+        ctx.quadraticCurveTo(badgeX, badgeY, badgeX + radius, badgeY);
+        ctx.fill();
         ctx.stroke();
 
-        ctx.font = '12px sans-serif';
-        ctx.fillStyle = '#10b981';
-        ctx.fillText('H', screenCenter.x + 15, screenCenter.y + 3);
+        // Draw H text
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('H', screenCenter.x, screenCenter.y);
+        ctx.restore();
       }
 
-      if (constraint.type === 'vertical' && constraint.edgeIndex !== undefined) {
+      if ((constraint.type === 'vertical' || constraint.type === 'vertical_pp') && constraint.edgeIndex !== undefined) {
         const v1 = vertices[constraint.edgeIndex];
         const v2 = vertices[(constraint.edgeIndex + 1) % vertices.length];
         const centerX = (v1.x + v2.x) / 2;
         const centerY = (v1.y + v2.y) / 2;
         const screenCenter = worldToScreen({ x: centerX, y: centerY }, viewport);
 
-        // Draw vertical indicator
-        ctx.strokeStyle = '#3b82f6';
-        ctx.lineWidth = 3;
+        // Draw vertical indicator - small icon on edge
+        ctx.save();
+        ctx.fillStyle = '#3b82f6';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+
+        // Draw a small rounded rectangle badge
+        const badgeX = screenCenter.x - 12;
+        const badgeY = screenCenter.y - 12;
+        const badgeW = 24;
+        const badgeH = 24;
+        const radius = 4;
+
         ctx.beginPath();
-        ctx.moveTo(screenCenter.x, screenCenter.y - 10);
-        ctx.lineTo(screenCenter.x, screenCenter.y + 10);
+        ctx.moveTo(badgeX + radius, badgeY);
+        ctx.lineTo(badgeX + badgeW - radius, badgeY);
+        ctx.quadraticCurveTo(badgeX + badgeW, badgeY, badgeX + badgeW, badgeY + radius);
+        ctx.lineTo(badgeX + badgeW, badgeY + badgeH - radius);
+        ctx.quadraticCurveTo(badgeX + badgeW, badgeY + badgeH, badgeX + badgeW - radius, badgeY + badgeH);
+        ctx.lineTo(badgeX + radius, badgeY + badgeH);
+        ctx.quadraticCurveTo(badgeX, badgeY + badgeH, badgeX, badgeY + badgeH - radius);
+        ctx.lineTo(badgeX, badgeY + radius);
+        ctx.quadraticCurveTo(badgeX, badgeY, badgeX + radius, badgeY);
+        ctx.fill();
         ctx.stroke();
 
-        ctx.font = '12px sans-serif';
-        ctx.fillStyle = '#3b82f6';
-        ctx.fillText('V', screenCenter.x + 3, screenCenter.y - 15);
+        // Draw V text
+        ctx.font = 'bold 14px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('V', screenCenter.x, screenCenter.y);
+        ctx.restore();
       }
 
       // Render p2p_distance constraints (auxiliary lines with labels)

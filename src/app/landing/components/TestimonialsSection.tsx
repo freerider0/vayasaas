@@ -1,7 +1,7 @@
 'use client'
 
 import { Card } from '@/components/ui/card'
-import { Star } from 'lucide-react'
+import { Play, TrendingUp, Quote } from 'lucide-react'
 
 const testimonials = [
   {
@@ -41,67 +41,101 @@ const metrics = [
 
 export function TestimonialsSection() {
   return (
-    <section id="testimonials" className="py-24 bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Inmobiliarias reales, resultados reales
+    <section id="testimonials" className="py-24 relative overflow-hidden">
+      {/* Background Design */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-gradient-to-br from-blue-100 to-purple-100 rounded-full blur-3xl opacity-30" />
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-20">
+          <div className="inline-flex items-center gap-2 mb-6">
+            <TrendingUp className="w-5 h-5 text-purple-600" />
+            <span className="text-sm font-bold text-purple-600 uppercase tracking-wider">Casos de éxito reales</span>
+          </div>
+          <h2 className="text-5xl lg:text-6xl font-black text-gray-900 mb-6">
+            500+ Inmobiliarias
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
+              Ahorrando Miles
+            </span>
           </h2>
-          <p className="text-xl text-gray-600">
-            Únete a más de 500 inmobiliarias que ahorran miles cada mes
-          </p>
+          <div className="inline-flex items-center gap-3 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-purple-100 cursor-pointer hover:shadow-xl transition-shadow">
+            <Play className="w-4 h-4 text-purple-600" />
+            <span className="text-sm font-semibold text-gray-700">Ver testimonios en vídeo (2 min)</span>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 mb-16">
           {testimonials.map((testimonial, index) => (
-            <Card key={index} className="p-6 border border-gray-200 hover:border-gray-300 transition-all duration-300 bg-white">
-              <div className="flex items-center gap-1 mb-4">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                ))}
-              </div>
-              
-              
-              <p className="text-gray-700 mb-6 leading-relaxed">
-                {testimonial.content}
-              </p>
+            <div key={index} className="group relative">
+              {/* Gradient Border Effect */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-3xl opacity-0 group-hover:opacity-75 blur transition duration-300" />
 
-              <div className="border-l-4 border-indigo-600 pl-4 mb-6">
-                <p className="text-lg font-bold text-gray-900">{testimonial.metric}</p>
-              </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="text-3xl">{testimonial.image}</div>
-                <div>
-                  <div className="font-semibold text-gray-900">{testimonial.name}</div>
-                  <div className="text-sm text-gray-600">
-                    {testimonial.role} en {testimonial.company}
+              <Card className="relative h-full p-8 bg-white/90 backdrop-blur-sm border-0 shadow-xl rounded-3xl hover:shadow-2xl transition-all duration-300">
+                {/* Quote Icon */}
+                <Quote className="w-8 h-8 text-purple-200 mb-4" />
+
+                {/* Content */}
+                <p className="text-lg text-gray-700 leading-relaxed mb-8">
+                  {testimonial.content}
+                </p>
+
+                {/* Metric Highlight */}
+                <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-4 mb-8 border border-purple-100">
+                  <p className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 text-center">
+                    {testimonial.metric}
+                  </p>
+                </div>
+
+                {/* Author */}
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-blue-400 rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+                    {testimonial.image}
+                  </div>
+                  <div>
+                    <div className="font-bold text-gray-900">{testimonial.name}</div>
+                    <div className="text-sm text-gray-600">
+                      {testimonial.role}
+                    </div>
+                    <div className="text-xs font-semibold text-purple-600">
+                      {testimonial.company}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           ))}
         </div>
 
-        <div className="bg-indigo-600 rounded-xl p-12 text-white">
-          <h3 className="text-2xl font-bold text-center mb-8">
-            Los números hablan por sí solos
-          </h3>
-          <div className="grid md:grid-cols-3 gap-8">
-            {metrics.map((metric, index) => (
-              <div key={index} className="text-center">
-                <div className="text-3xl font-bold mb-2">{metric.value}</div>
-                <div className="text-indigo-100">{metric.label}</div>
+        {/* Metrics Section - Premium Design */}
+        <div className="relative mt-20">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-3xl blur-2xl opacity-75" />
+          <div className="relative bg-gradient-to-r from-purple-600 to-blue-600 rounded-3xl p-12 text-white overflow-hidden">
+            {/* Pattern Background */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='white' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+              }} />
+            </div>
+
+            <h3 className="text-3xl font-bold text-center mb-12 relative">
+              Los números que importan
+            </h3>
+            <div className="grid md:grid-cols-3 gap-8 relative">
+              {metrics.map((metric, index) => (
+                <div key={index} className="text-center group">
+                  <div className="text-6xl font-black mb-3 group-hover:scale-110 transition-transform">
+                    {metric.value}
+                  </div>
+                  <div className="text-lg font-medium text-white/90">{metric.label}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-12 text-center relative">
+              <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-6 py-2">
+                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                <span className="text-sm font-semibold">Actualizado en tiempo real • 92% retención</span>
               </div>
-            ))}
-          </div>
-          <div className="mt-8 text-center">
-            <p className="text-indigo-100 mb-4">
-              Basado en datos de más de 500 inmobiliarias usando CertPro
-            </p>
-            <p className="text-sm font-medium">
-              92% tasa de retención de clientes
-            </p>
+            </div>
           </div>
         </div>
       </div>

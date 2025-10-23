@@ -26,7 +26,62 @@ export function ConstraintToolsPanel({
   triggerConstraintSolving,
   isWallSelection = false
 }: ConstraintToolsPanelProps) {
-  
+
+  // Calculate DOF and constraint status - recalculate on every render to stay in sync
+  const constraintStatus = (() => {
+    if (!worldRef.current) return null;
+
+    const roomEntity = roomEntities.get(selectedRoomId);
+    if (!roomEntity) return null;
+
+    const geometry = roomEntity.get(GeometryComponent) as GeometryComponent;
+
+    // Initialize primitives if they don't exist yet
+    if (!geometry.primitives || geometry.primitives.length === 0) {
+      // Return status with 0 constraints if no primitives yet
+      const vertexCount = geometry.vertices?.length || 0;
+      if (vertexCount === 0) return null;
+
+      // Reserve 2 DOF for at least one fixed point (anchor point)
+      const totalDOF = Math.max(0, vertexCount * 2 - 2);
+      return {
+        constraintCount: 0,
+        totalDOF,
+        freePoints: vertexCount,
+        fixedPoints: 0,
+        totalPoints: vertexCount,
+        status: 'ok' as const,
+        usage: 0
+      };
+    }
+
+    const points = geometry.primitives.filter(p => p.type === 'point');
+    const constraints = geometry.primitives.filter(p => !['point', 'line', 'circle'].includes(p.type));
+
+    const fixedPoints = points.filter((p: any) => p.fixed).length;
+    const freePoints = points.length - fixedPoints;
+    const rawDOF = freePoints * 2;
+
+    // Reserve 2 DOF for at least one fixed point (anchor point for the geometry)
+    // This prevents the geometry from being able to translate freely in space
+    const totalDOF = Math.max(0, rawDOF - 2);
+    const constraintCount = constraints.length;
+
+    let status: 'ok' | 'warning' | 'error' = 'ok';
+    if (constraintCount >= totalDOF * 0.8) status = 'warning';
+    if (constraintCount > totalDOF) status = 'error';
+
+    return {
+      constraintCount,
+      totalDOF,
+      freePoints,
+      fixedPoints,
+      totalPoints: points.length,
+      status,
+      usage: totalDOF > 0 ? (constraintCount / totalDOF * 100) : 0
+    };
+  })();
+
   return (
     <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
       <div className="bg-white rounded-lg shadow-lg p-2">
@@ -36,15 +91,38 @@ export function ConstraintToolsPanel({
               ? `(${selectedEdgeIndices.length} wall${selectedEdgeIndices.length > 1 ? 's' : ''})`
               : isWallSelection && selectedEdgeIndex !== null
                 ? `(Wall ${selectedEdgeIndex + 1})`
-                : selectedVertexIndices.length > 0 
+                : selectedVertexIndices.length > 0
                   ? `(${selectedVertexIndices.length} vertices)`
-                  : selectedEdgeIndices.length > 0 
+                  : selectedEdgeIndices.length > 0
                     ? `(${selectedEdgeIndices.length} edges)`
-                    : selectedEdgeIndex !== null 
+                    : selectedEdgeIndex !== null
                       ? `(Edge ${selectedEdgeIndex + 1})`
                       : '(Shift+Click to select)'
           }
         </div>
+
+        {/* DOF Status Display */}
+        {constraintStatus && (
+          <div className={`text-xs px-2 py-1 rounded mb-2 text-center font-mono ${
+            constraintStatus.status === 'error'
+              ? 'bg-red-100 text-red-700 border border-red-300'
+              : constraintStatus.status === 'warning'
+                ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                : 'bg-green-100 text-green-700 border border-green-300'
+          }`}>
+            <div className="font-semibold">
+              {constraintStatus.status === 'error' && '⚠️ OVER-CONSTRAINED'}
+              {constraintStatus.status === 'warning' && '⚡ Near Limit'}
+              {constraintStatus.status === 'ok' && '✓ OK'}
+            </div>
+            <div className="mt-1">
+              Constraints: <span className="font-bold">{constraintStatus.constraintCount}</span> / DOF: <span className="font-bold">{constraintStatus.totalDOF}</span>
+            </div>
+            <div className="text-[10px] opacity-75">
+              ({constraintStatus.usage.toFixed(0)}% used · {constraintStatus.freePoints} free pts)
+            </div>
+          </div>
+        )}
         <div className="flex gap-1">
           {/* All constraint buttons exactly as in original */}
           {/* Horizontal */}
@@ -54,22 +132,30 @@ export function ConstraintToolsPanel({
                 const roomEntity = worldRef.current?.get(selectedRoomId);
                 if (roomEntity) {
                   const geometry = roomEntity.get(GeometryComponent) as GeometryComponent;
-                  
-                  // Check if constraint already exists
-                  const existingConstraint = geometry.primitives.find(
-                    (p: any) => p.type === 'horizontal' && 
-                    p.l1_id === `l${selectedEdgeIndex}`
-                  );
-                  
-                  if (!existingConstraint) {
-                    // Get the line to find its points
-                    const line = geometry.primitives.find(p => p.id === `l${selectedEdgeIndex}`) as any;
-                    if (line && line.p1_id && line.p2_id) {
-                      geometry.addConstraint('horizontal_pp', {
-                        p1_id: line.p1_id,
-                        p2_id: line.p2_id
-                      });
-                    }
+
+                  // Get the line to find its points
+                  const line = geometry.primitives.find(p => p.id === `l${selectedEdgeIndex}`) as any;
+                  if (line && line.p1_id && line.p2_id) {
+                    // Remove any existing orientation constraints (horizontal OR vertical) on this edge
+                    // They are mutually exclusive
+                    const orientationConstraints = geometry.primitives.filter((p: any) =>
+                      (p.type === 'horizontal_pp' || p.type === 'vertical_pp') && (
+                        (p.p1_id === line.p1_id && p.p2_id === line.p2_id) ||
+                        (p.p1_id === line.p2_id && p.p2_id === line.p1_id)
+                      )
+                    );
+
+                    orientationConstraints.forEach((c: any) => {
+                      console.log(`[ConstraintToolsPanel] Removing ${c.type} constraint ${c.id} before adding horizontal`);
+                      geometry.removeConstraint(c.id);
+                    });
+
+                    // Add new horizontal constraint
+                    geometry.addConstraint('horizontal_pp', {
+                      p1_id: line.p1_id,
+                      p2_id: line.p2_id
+                    });
+
                     // Trigger constraint solving
                     triggerConstraintSolving(selectedRoomId);
                   }
@@ -89,21 +175,30 @@ export function ConstraintToolsPanel({
                 const roomEntity = worldRef.current?.get(selectedRoomId);
                 if (roomEntity) {
                   const geometry = roomEntity.get(GeometryComponent) as GeometryComponent;
-                  
-                  const existingConstraint = geometry.primitives.find(
-                    (p: any) => p.type === 'vertical' && 
-                    p.l1_id === `l${selectedEdgeIndex}`
-                  );
-                  
-                  if (!existingConstraint) {
-                    // Get the line to find its points
-                    const line = geometry.primitives.find(p => p.id === `l${selectedEdgeIndex}`) as any;
-                    if (line && line.p1_id && line.p2_id) {
-                      geometry.addConstraint('vertical_pp', {
-                        p1_id: line.p1_id,
-                        p2_id: line.p2_id
-                      });
-                    }
+
+                  // Get the line to find its points
+                  const line = geometry.primitives.find(p => p.id === `l${selectedEdgeIndex}`) as any;
+                  if (line && line.p1_id && line.p2_id) {
+                    // Remove any existing orientation constraints (horizontal OR vertical) on this edge
+                    // They are mutually exclusive
+                    const orientationConstraints = geometry.primitives.filter((p: any) =>
+                      (p.type === 'horizontal_pp' || p.type === 'vertical_pp') && (
+                        (p.p1_id === line.p1_id && p.p2_id === line.p2_id) ||
+                        (p.p1_id === line.p2_id && p.p2_id === line.p1_id)
+                      )
+                    );
+
+                    orientationConstraints.forEach((c: any) => {
+                      console.log(`[ConstraintToolsPanel] Removing ${c.type} constraint ${c.id} before adding vertical`);
+                      geometry.removeConstraint(c.id);
+                    });
+
+                    // Add new vertical constraint
+                    geometry.addConstraint('vertical_pp', {
+                      p1_id: line.p1_id,
+                      p2_id: line.p2_id
+                    });
+
                     // Entity will be updated after solving
                     triggerConstraintSolving(selectedRoomId);
                   }
@@ -409,26 +504,36 @@ export function ConstraintToolsPanel({
                 const roomEntity = worldRef.current?.get(selectedRoomId);
                 if (roomEntity) {
                   const geometry = roomEntity.get(GeometryComponent) as GeometryComponent;
-                  
+
                   const [idx1, idx2] = selectedVertexIndices;
                   const p1 = geometry.vertices[idx1];
                   const p2 = geometry.vertices[idx2];
-                  
+
                   if (p1 && p2) {
                     const dx = p2.x - p1.x;
                     const dy = p2.y - p1.y;
                     const currentDistance = Math.sqrt(dx * dx + dy * dy);
-                    
+
                     const input = prompt('Set distance between points:', currentDistance.toFixed(2));
                     if (input) {
                       const newDistance = parseFloat(input);
                       if (!isNaN(newDistance) && newDistance > 0) {
+                        // IMPORTANT: Fix the first point to prevent scale drift
+                        const p1Primitive = geometry.primitives.find(
+                          (p: any) => p.type === 'point' && p.id === `p${idx1}`
+                        ) as any;
+
+                        if (p1Primitive && !p1Primitive.fixed) {
+                          console.log('[ConstraintToolsPanel] Auto-fixing anchor point to prevent scale drift');
+                          p1Primitive.fixed = true;
+                        }
+
                         geometry.addConstraint('p2p_distance', {
                           p1_id: `p${idx1}`,
                           p2_id: `p${idx2}`,
                           distance: newDistance
                         });
-                        
+
                         geometry.isDirty = true;
                         worldRef.current.updateEntity(roomEntity);
                         triggerConstraintSolving(selectedRoomId);

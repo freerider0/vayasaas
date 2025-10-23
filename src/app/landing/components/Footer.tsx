@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { Separator } from '@/components/ui/separator'
-import { Twitter, Linkedin, Github, Youtube } from 'lucide-react'
+import { X, Linkedin, Github, Youtube } from 'lucide-react'
 
 const footerLinks = {
   Servicios: [
@@ -34,7 +34,7 @@ const footerLinks = {
 }
 
 const socialLinks = [
-  { name: 'Twitter', icon: Twitter, href: '#' },
+  { name: 'Twitter', icon: X, href: '#' },
   { name: 'LinkedIn', icon: Linkedin, href: '#' },
   { name: 'GitHub', icon: Github, href: '#' },
   { name: 'YouTube', icon: Youtube, href: '#' },

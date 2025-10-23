@@ -15,14 +15,14 @@ export default function ParaInmobiliarias() {
       <section className="pt-32 pb-20">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <p className="text-sm font-medium text-gray-600 mb-4">
+            <p className="text-sm font-medium text-gray-800 mb-4">
               500+ inmobiliarias ya ahorran con nosotros
             </p>
             <h1 className="text-5xl font-bold text-gray-900 mb-6">
               Para inmobiliarias que 
               <span className="block text-indigo-600">quieren multiplicar ventas</span>
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-gray-800 max-w-3xl mx-auto">
               Elimina el cuello de botella de los certificados. Ofrece un servicio más rápido, 
               ahorra miles cada mes y cierra más ventas.
             </p>
@@ -39,7 +39,7 @@ export default function ParaInmobiliarias() {
                       <path d="M5 4v12l10-6z" />
                     </svg>
                   </div>
-                  <p className="text-gray-600">Por qué 500+ inmobiliarias nos eligen (1 minuto)</p>
+                  <p className="text-gray-800">Por qué 500+ inmobiliarias nos eligen (1 minuto)</p>
                 </div>
               </div>
             </div>
@@ -72,19 +72,19 @@ export default function ParaInmobiliarias() {
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <span className="text-red-600 mt-1">✗</span>
-                  <span className="text-gray-600">€250-350 por cada certificado</span>
+                  <span className="text-gray-800">€250-350 por cada certificado</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-red-600 mt-1">✗</span>
-                  <span className="text-gray-600">5-10 días de espera</span>
+                  <span className="text-gray-800">5-10 días de espera</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-red-600 mt-1">✗</span>
-                  <span className="text-gray-600">Ventas perdidas por retrasos</span>
+                  <span className="text-gray-800">Ventas perdidas por retrasos</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-red-600 mt-1">✗</span>
-                  <span className="text-gray-600">Costes imprevisibles cada mes</span>
+                  <span className="text-gray-800">Costes imprevisibles cada mes</span>
                 </li>
               </ul>
             </div>
@@ -96,19 +96,19 @@ export default function ParaInmobiliarias() {
               <ul className="space-y-3">
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">€0 por certificado (ilimitados)</span>
+                  <span className="text-gray-800">€0 por certificado (ilimitados)</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">24-48h garantizadas</span>
+                  <span className="text-gray-800">24-48h garantizadas</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">Cierra ventas más rápido</span>
+                  <span className="text-gray-800">Cierra ventas más rápido</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">Cuota fija mensual predecible</span>
+                  <span className="text-gray-800">Cuota fija mensual predecible</span>
                 </li>
               </ul>
             </div>
@@ -118,22 +118,22 @@ export default function ParaInmobiliarias() {
             <div className="text-center">
               <Euro className="w-8 h-8 text-indigo-600 mx-auto mb-2" />
               <div className="text-3xl font-bold text-gray-900">€3.500</div>
-              <div className="text-sm text-gray-600">Ahorro mensual medio</div>
+              <div className="text-sm text-gray-800">Ahorro mensual medio</div>
             </div>
             <div className="text-center">
               <Clock className="w-8 h-8 text-indigo-600 mx-auto mb-2" />
               <div className="text-3xl font-bold text-gray-900">48h</div>
-              <div className="text-sm text-gray-600">Entrega garantizada</div>
+              <div className="text-sm text-gray-800">Entrega garantizada</div>
             </div>
             <div className="text-center">
               <Users className="w-8 h-8 text-indigo-600 mx-auto mb-2" />
               <div className="text-3xl font-bold text-gray-900">500+</div>
-              <div className="text-sm text-gray-600">Inmobiliarias activas</div>
+              <div className="text-sm text-gray-800">Inmobiliarias activas</div>
             </div>
             <div className="text-center">
               <TrendingUp className="w-8 h-8 text-indigo-600 mx-auto mb-2" />
               <div className="text-3xl font-bold text-gray-900">92%</div>
-              <div className="text-sm text-gray-600">Retención clientes</div>
+              <div className="text-sm text-gray-800">Retención clientes</div>
             </div>
           </div>
         </div>
@@ -168,15 +168,15 @@ export default function ParaInmobiliarias() {
           <Card className="p-8">
             <div className="grid md:grid-cols-3 gap-6 mb-8">
               <div>
-                <label className="text-sm text-gray-600">Certificados al mes</label>
+                <label className="text-sm text-gray-800">Certificados al mes</label>
                 <div className="text-3xl font-bold text-gray-900">15</div>
               </div>
               <div>
-                <label className="text-sm text-gray-600">Coste actual</label>
+                <label className="text-sm text-gray-800">Coste actual</label>
                 <div className="text-3xl font-bold text-red-600">€3.750</div>
               </div>
               <div>
-                <label className="text-sm text-gray-600">Con CertPro</label>
+                <label className="text-sm text-gray-800">Con CertPro</label>
                 <div className="text-3xl font-bold text-green-600">€100</div>
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function ParaInmobiliarias() {
                 <span className="text-lg text-gray-700">Ahorro mensual:</span>
                 <span className="text-3xl font-bold text-green-600">€3.650</span>
               </div>
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-800">
                 Ahorro anual: €43.800
               </div>
             </div>
@@ -219,33 +219,33 @@ export default function ParaInmobiliarias() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 <tr>
-                  <td className="py-4 px-4 text-gray-600">Certificados al mes</td>
-                  <td className="text-center py-4 px-4 text-gray-600">10 unidades</td>
+                  <td className="py-4 px-4 text-gray-800">Certificados al mes</td>
+                  <td className="text-center py-4 px-4 text-gray-800">10 unidades</td>
                   <td className="text-center py-4 px-4 font-semibold text-green-600">Ilimitados</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-4 text-gray-600">Precio por certificado</td>
-                  <td className="text-center py-4 px-4 text-gray-600">€250-350</td>
+                  <td className="py-4 px-4 text-gray-800">Precio por certificado</td>
+                  <td className="text-center py-4 px-4 text-gray-800">€250-350</td>
                   <td className="text-center py-4 px-4 font-semibold text-green-600">€0</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-4 text-gray-600">Tiempo de entrega</td>
-                  <td className="text-center py-4 px-4 text-gray-600">5-10 días</td>
+                  <td className="py-4 px-4 text-gray-800">Tiempo de entrega</td>
+                  <td className="text-center py-4 px-4 text-gray-800">5-10 días</td>
                   <td className="text-center py-4 px-4 font-semibold text-green-600">24-48h</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-4 text-gray-600">Facturación directa</td>
-                  <td className="text-center py-4 px-4 text-gray-600">No</td>
+                  <td className="py-4 px-4 text-gray-800">Facturación directa</td>
+                  <td className="text-center py-4 px-4 text-gray-800">No</td>
                   <td className="text-center py-4 px-4 font-semibold text-green-600">Sí (€100/mes)</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-4 text-gray-600">Contratos automáticos</td>
-                  <td className="text-center py-4 px-4 text-gray-600">No</td>
+                  <td className="py-4 px-4 text-gray-800">Contratos automáticos</td>
+                  <td className="text-center py-4 px-4 text-gray-800">No</td>
                   <td className="text-center py-4 px-4 font-semibold text-green-600">Incluido</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-4 text-gray-600">Programa afiliados</td>
-                  <td className="text-center py-4 px-4 text-gray-600">No</td>
+                  <td className="py-4 px-4 text-gray-800">Programa afiliados</td>
+                  <td className="text-center py-4 px-4 text-gray-800">No</td>
                   <td className="text-center py-4 px-4 font-semibold text-green-600">20% comisión</td>
                 </tr>
               </tbody>
@@ -260,7 +260,7 @@ export default function ParaInmobiliarias() {
           <h2 className="text-3xl font-bold text-gray-900 mb-6">
             Únete a 500+ inmobiliarias que ya ahorran
           </h2>
-          <p className="text-xl text-gray-600 mb-8">
+          <p className="text-xl text-gray-800 mb-8">
             Primera certificado gratis. Sin tarjeta. Sin compromiso.
           </p>
           <Button size="lg" className="bg-indigo-600 hover:bg-indigo-700">

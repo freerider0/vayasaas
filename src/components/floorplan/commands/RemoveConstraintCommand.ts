@@ -4,7 +4,7 @@
 
 import { BaseCommand, CommandContext } from './Command';
 import { GeometryComponent } from '../components/GeometryComponent';
-import { GeometrySystemRefactored } from '../systems/GeometrySystemRefactored';
+import { GeometrySystem } from '../systems/GeometrySystem';
 
 export class RemoveConstraintCommand extends BaseCommand<void> {
   private removedConstraint: any = null;
@@ -50,7 +50,7 @@ export class RemoveConstraintCommand extends BaseCommand<void> {
     geometry.isDirty = true;
     
     // Trigger immediate solve
-    const geoSystem = world.getSystem(GeometrySystemRefactored);
+    const geoSystem = world.getSystem(GeometrySystem);
     if (geoSystem) {
       geoSystem.solveImmediate(entity);
     }
@@ -80,7 +80,7 @@ export class RemoveConstraintCommand extends BaseCommand<void> {
     geometry.isDirty = true;
     
     // Trigger immediate solve
-    const geoSystem = world.getSystem(GeometrySystemRefactored);
+    const geoSystem = world.getSystem(GeometrySystem);
     if (geoSystem) {
       geoSystem.solveImmediate(entity);
     }

@@ -1,16 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Check, X, Zap, Home, Camera, FileText, TrendingUp, Star } from 'lucide-react'
+import { Check, X } from 'lucide-react'
 
 const plans = [
   {
     name: 'Esencial',
-    icon: FileText,
     description: 'Perfecto para inmobiliarias que empiezan su transformación digital',
     monthlyPrice: 50,
     yearlyPrice: 50,
@@ -33,7 +29,6 @@ const plans = [
   },
   {
     name: 'Profesional',
-    icon: TrendingUp,
     description: 'La elección más popular para inmobiliarias activas',
     monthlyPrice: 100,
     yearlyPrice: 100,
@@ -57,7 +52,6 @@ const plans = [
   },
   {
     name: 'Premium Plus',
-    icon: Star,
     description: 'Solución completa con herramientas de marketing visual',
     monthlyPrice: 200,
     yearlyPrice: 200,
@@ -93,10 +87,10 @@ export function PricingSection() {
     <section id="pricing" className="py-24 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-5xl font-bold text-gray-900 mb-6">
             Elige tu plan ilimitado
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+          <p className="text-2xl text-gray-700 max-w-2xl mx-auto mb-10 font-light leading-relaxed">
             Deja de pagar por certificado. Ahorra miles con nuestro modelo de suscripción ilimitada.
           </p>
 
@@ -113,32 +107,37 @@ export function PricingSection() {
               } bg-white`}
             >
               {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-3 py-1 rounded-full text-sm font-medium">
-                  Más Popular
+                <div className="absolute -top-5 left-0 right-0">
+                  <div className="text-center">
+                    <span className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-full text-xs font-bold uppercase tracking-wider inline-block">
+                      Recomendado
+                    </span>
+                  </div>
                 </div>
               )}
 
               <div className="mb-8">
-                <div className="mb-4">
-                  <h3 className="text-2xl font-bold text-gray-900">{plan.name}</h3>
+                <div className="mb-2">
+                  <h3 className="text-2xl font-black text-gray-900 tracking-tight">{plan.name}</h3>
                 </div>
-                <p className="text-gray-600">{plan.description}</p>
+                <p className="text-base text-gray-600 leading-relaxed mb-3">{plan.description}</p>
                 {plan.highlight && (
-                  <p className="text-sm text-green-700 font-medium mt-2">
-                    {plan.highlight}
-                  </p>
+                  <div className="inline-block bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg px-3 py-1">
+                    <p className="text-xs text-purple-700 font-bold uppercase tracking-wide">
+                      {plan.highlight}
+                    </p>
+                  </div>
                 )}
               </div>
 
-              <div className="mb-8">
-                <div className="flex items-baseline">
-                  <span className="text-4xl font-bold text-gray-900">
-                    €{plan.monthlyPrice}
-                  </span>
-                  <span className="ml-2 text-gray-600">/mes</span>
+              <div className="mb-8 pb-8 border-b border-gray-100">
+                <div className="flex items-end gap-1">
+                  <span className="text-lg font-medium text-gray-600">€</span>
+                  <span className="text-6xl font-black text-gray-900 leading-none tracking-tight">{plan.monthlyPrice}</span>
+                  <span className="text-lg text-gray-600 font-medium mb-2">/mes</span>
                 </div>
-                <p className="text-sm text-gray-500 mt-1">
-                  Facturado mensualmente
+                <p className="text-xs text-gray-500 mt-2 uppercase tracking-wide font-semibold">
+                  Facturación mensual • Sin permanencia
                 </p>
               </div>
 
@@ -146,13 +145,14 @@ export function PricingSection() {
                 {plan.features.map((feature, index) => (
                   <li key={index} className="flex items-start gap-3">
                     {feature.included ? (
-                      <Check className={`w-5 h-5 ${feature.highlight ? 'text-blue-600' : 'text-green-500'} mt-0.5 flex-shrink-0`} />
+                      <Check className={`w-5 h-5 ${feature.highlight ? 'text-purple-600' : 'text-blue-600'} mt-0.5 flex-shrink-0`} />
                     ) : (
                       <X className="w-5 h-5 text-gray-300 mt-0.5 flex-shrink-0" />
                     )}
                     <span className={`
-                      ${feature.included ? 'text-gray-700' : 'text-gray-400'}
-                      ${feature.highlight ? 'font-semibold' : ''}
+                      ${feature.included ? 'text-gray-700' : 'text-gray-400 line-through'}
+                      ${feature.highlight ? 'font-bold text-gray-900' : ''}
+                      text-sm leading-relaxed
                     `}>
                       {feature.name}
                     </span>
@@ -160,59 +160,70 @@ export function PricingSection() {
                 ))}
               </ul>
 
-              <Button 
-                className={`w-full ${
-                  plan.popular 
-                    ? 'bg-indigo-600 hover:bg-indigo-700' 
-                    : 'border-gray-300 hover:bg-gray-50'
+              <Button
+                className={`w-full py-6 text-base font-semibold transition-all duration-200 ${
+                  plan.popular
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl'
+                    : 'bg-white border-2 border-gray-300 hover:border-gray-400 text-gray-900 hover:bg-gray-50'
                 }`}
                 variant={plan.popular ? 'default' : 'outline'}
                 size="lg"
               >
-                {plan.cta}
+                <span className="tracking-wide">{plan.cta}</span>
               </Button>
             </Card>
           ))}
         </div>
 
-        <div className="mt-20 p-8 bg-white rounded-2xl shadow-lg">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-            Compara costes: Tradicional vs CertPro
-          </h3>
+        <div className="mt-24">
+          <div className="text-center mb-12">
+            <span className="text-sm font-bold text-indigo-600 uppercase tracking-wider">Comparativa de ahorro</span>
+            <h3 className="text-4xl font-black text-gray-900 mt-2">
+              Por qué pagar más?
+            </h3>
+          </div>
+          <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl shadow-xl p-8 border border-gray-100">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4">Servicio</th>
-                  <th className="text-center py-3 px-4">Precio Mercado</th>
-                  <th className="text-center py-3 px-4">Con CertPro</th>
-                  <th className="text-center py-3 px-4">Tu Ahorro</th>
+                  <th className="text-left py-4 px-6 text-xs font-black text-gray-600 uppercase tracking-wider">Servicio</th>
+                  <th className="text-center py-4 px-6 text-xs font-black text-gray-600 uppercase tracking-wider">Precio Tradicional</th>
+                  <th className="text-center py-4 px-6 text-xs font-black text-indigo-600 uppercase tracking-wider">Con CertPro</th>
+                  <th className="text-center py-4 px-6 text-xs font-black text-purple-600 uppercase tracking-wider">Tu Ahorro</th>
                 </tr>
               </thead>
               <tbody>
                 {comparisonData.map((item, index) => (
                   <tr key={index} className="border-b">
-                    <td className="py-3 px-4 font-medium">{item.service}</td>
-                    <td className="text-center py-3 px-4 text-gray-600">{item.traditional}</td>
-                    <td className="text-center py-3 px-4 text-green-600 font-semibold">{item.withUs}</td>
-                    <td className="text-center py-3 px-4 text-green-700 font-semibold">
-                      Hasta {parseInt(item.traditional.replace('€', '')) - parseInt(item.withUs.replace('€', ''))}€
+                    <td className="py-4 px-6 font-semibold text-gray-900">{item.service}</td>
+                    <td className="text-center py-4 px-6">
+                      <span className="text-xl font-bold text-gray-500 line-through">{item.traditional}</span>
+                    </td>
+                    <td className="text-center py-4 px-6">
+                      <span className="text-xl font-black text-purple-600">{item.withUs}</span>
+                    </td>
+                    <td className="text-center py-4 px-6">
+                      <span className="inline-block bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 px-3 py-1 rounded-full text-sm font-black">
+                        Hasta {parseInt(item.traditional.replace('€', '')) - parseInt(item.withUs.replace('€', ''))}€
+                      </span>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <p className="text-center text-sm text-gray-600 mt-4">
+          <p className="text-center text-sm text-gray-800 mt-4">
             * Basado en precios promedio del mercado en área metropolitana de Barcelona
           </p>
+          </div>
         </div>
 
         <div className="mt-12 text-center">
-          <p className="text-gray-600 mb-4">
+          <p className="text-gray-800 mb-4">
             Todos los planes incluyen: Garantía cumplimiento legal • Archivo digital • Soporte experto
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-700">
             ¿Necesitas un plan personalizado? <a href="#" className="text-blue-600 hover:underline">Contacta para soluciones enterprise</a>
           </p>
         </div>

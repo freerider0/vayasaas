@@ -4,26 +4,12 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  FileCheck, 
-  Clock, 
-  Calculator, 
-  Shield, 
-  Zap, 
-  Users,
-  CheckCircle,
-  ArrowRight,
-  Building,
-  FileText,
-  Home,
-  ClipboardCheck
-} from 'lucide-react'
+import { Play, ArrowRight } from 'lucide-react'
 
 const certificateTypes = [
   {
     id: 'energy',
     title: 'Certificado Energético',
-    icon: Zap,
     description: 'CEE obligatorio para todas las ventas y alquileres',
     color: 'from-green-500 to-emerald-500',
     benefits: [
@@ -39,7 +25,6 @@ const certificateTypes = [
   {
     id: 'habitability',
     title: 'Cédula de Habitabilidad',
-    icon: Home,
     description: 'Requisito legal para ocupación y suministros',
     color: 'from-blue-500 to-cyan-500',
     benefits: [
@@ -55,7 +40,6 @@ const certificateTypes = [
   {
     id: 'ite',
     title: 'Inspección Técnica (ITE)',
-    icon: Building,
     description: 'Obligatoria para edificios de más de 45 años',
     color: 'from-orange-500 to-red-500',
     benefits: [
@@ -71,7 +55,6 @@ const certificateTypes = [
   {
     id: 'nota-simple',
     title: 'Documentación Inmobiliaria',
-    icon: FileText,
     description: 'Informes completos registro y catastro',
     color: 'from-purple-500 to-pink-500',
     benefits: [
@@ -91,21 +74,24 @@ export function FeaturesSection() {
     <section id="features" className="py-24 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
-          <Badge variant="outline" className="mb-4">Tipos de Certificados</Badge>
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Todos los Certificados que tu Inmobiliaria Necesita
+          <div className="inline-flex items-center gap-2 mb-6">
+            <div className="h-px w-12 bg-gradient-to-r from-transparent to-blue-500" />
+            <span className="text-sm font-bold text-blue-600 uppercase tracking-wider">Todo incluido</span>
+            <div className="h-px w-12 bg-gradient-to-l from-transparent to-blue-500" />
+          </div>
+          <h2 className="text-5xl lg:text-6xl font-black text-gray-900 mb-6">
+            Un Plan. <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">Todo Ilimitado.</span>
           </h2>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Una suscripción cubre todos los tipos de certificados. Sin límites, sin costes extra, sin sorpresas.
+          <p className="text-2xl text-gray-600 max-w-3xl mx-auto font-light">
+            Certificados energéticos, cédulas, ITE, contratos... Todo sin límites.
           </p>
         </div>
 
         <Tabs defaultValue="energy" className="w-full">
           <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-12">
             {certificateTypes.map((cert) => (
-              <TabsTrigger key={cert.id} value={cert.id} className="flex items-center gap-2">
-                <cert.icon className="w-4 h-4" />
-                <span className="hidden sm:inline">{cert.title}</span>
+              <TabsTrigger key={cert.id} value={cert.id}>
+                {cert.title}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -114,58 +100,65 @@ export function FeaturesSection() {
             <TabsContent key={cert.id} value={cert.id}>
               <div className="grid lg:grid-cols-2 gap-12 items-center">
                 <div>
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className={`p-3 rounded-xl bg-gradient-to-br ${cert.color} text-white`}>
-                      <cert.icon className="w-6 h-6" />
+                  <div className="mb-8">
+                    <div className="inline-flex items-center gap-3 mb-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-full px-4 py-2">
+                      <Play className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm font-semibold text-gray-700">Ver video explicativo (60s)</span>
                     </div>
-                    <div>
-                      <h3 className="text-2xl font-bold text-gray-900">{cert.title}</h3>
-                      <p className="text-gray-600">{cert.description}</p>
-                    </div>
+                    <h3 className="text-4xl font-black text-gray-900 mb-3">{cert.title}</h3>
+                    <p className="text-xl text-gray-600 leading-relaxed">{cert.description}</p>
                   </div>
 
                   <ul className="space-y-3 mb-8">
                     {cert.benefits.map((benefit, index) => (
-                      <li key={index} className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700">{benefit}</span>
+                      <li key={index} className="flex items-start gap-3 group">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-white text-xs font-bold">✓</span>
+                        </div>
+                        <span className="text-gray-700 text-lg group-hover:text-gray-900 transition-colors">{benefit}</span>
                       </li>
                     ))}
                   </ul>
 
-                  <div className="flex items-center gap-6 p-4 bg-slate-50 rounded-lg">
-                    <div>
-                      <span className="text-sm text-gray-500">Tiempo habitual</span>
-                      <div className="font-semibold text-gray-900">{cert.turnaround}</div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200">
+                      <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">Precio tradicional</span>
+                      <div className="text-2xl font-black text-gray-700 line-through mt-1">{cert.normalPrice}</div>
                     </div>
-                    <div className="border-l pl-6">
-                      <span className="text-sm text-gray-500">Precio mercado por certificado</span>
-                      <div className="font-semibold text-gray-900">{cert.normalPrice}</div>
+                    <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl p-4 border border-purple-100">
+                      <span className="text-xs font-bold text-purple-600 uppercase tracking-wide">Tiempo entrega</span>
+                      <div className="text-2xl font-black text-purple-600 mt-1">{cert.turnaround}</div>
                     </div>
                   </div>
                 </div>
 
-                <Card className="p-8 bg-gradient-to-br from-blue-50 to-slate-50 border-slate-200">
-                  <div className="text-center mb-6">
-                    <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                      Con Suscripción Ilimitada
-                    </h4>
-                    <div className="text-4xl font-bold text-green-600">€0</div>
-                    <p className="text-sm text-gray-600">por certificado</p>
-                  </div>
+                <Card className="relative overflow-hidden border-0 shadow-2xl">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600" />
+                  <div className="relative p-8 text-white">
+                    <div className="text-center mb-8">
+                      <h4 className="text-2xl font-bold mb-4">
+                        Con CertPro Ilimitado
+                      </h4>
+                      <div className="text-7xl font-black">€0</div>
+                      <p className="text-lg opacity-90">por certificado</p>
+                      <div className="inline-flex items-center gap-2 mt-4 bg-white/20 rounded-full px-4 py-2">
+                        <span className="text-sm font-bold">Ahorro: {parseInt(cert.normalPrice.replace('€', '')) * 20}€/mes</span>
+                      </div>
+                    </div>
                   
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-white rounded-lg">
-                      <span className="text-sm text-gray-600">Certificados mensuales</span>
-                      <span className="font-semibold">Ilimitados</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-white rounded-lg">
-                      <span className="text-sm text-gray-600">Procesamiento prioritario</span>
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-white rounded-lg">
-                      <span className="text-sm text-gray-600">Entrega digital</span>
-                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-white/10 backdrop-blur-sm rounded-xl">
+                        <span className="text-sm font-medium">Certificados mensuales</span>
+                        <span className="font-bold">ILIMITADOS</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white/10 backdrop-blur-sm rounded-xl">
+                        <span className="text-sm font-medium">Procesamiento prioritario</span>
+                        <span className="text-white font-bold text-lg">✓</span>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-white/10 backdrop-blur-sm rounded-xl">
+                        <span className="text-sm font-medium">Entrega digital</span>
+                        <span className="text-white font-bold text-lg">✓</span>
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -177,23 +170,20 @@ export function FeaturesSection() {
         <div className="mt-20 p-8 bg-gradient-to-r from-blue-50 to-slate-50 rounded-2xl">
           <div className="grid md:grid-cols-3 gap-8 text-center">
             <div>
-              <Calculator className="w-12 h-12 text-blue-600 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Calculadora de Ahorro</h3>
-              <p className="text-sm text-gray-600">
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Calculadora de Ahorro</h3>
+              <p className="text-sm text-gray-800">
                 Las inmobiliarias ahorran una media de €2.500/mes con la suscripción ilimitada
               </p>
             </div>
             <div>
-              <Clock className="w-12 h-12 text-green-600 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Servicio Express</h3>
-              <p className="text-sm text-gray-600">
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Servicio Express</h3>
+              <p className="text-sm text-gray-800">
                 Cola prioritaria para todos los miembros con suscripción
               </p>
             </div>
             <div>
-              <Users className="w-12 h-12 text-purple-600 mx-auto mb-3" />
-              <h3 className="font-semibold text-gray-900 mb-2">Acceso de Equipo</h3>
-              <p className="text-sm text-gray-600">
+              <h3 className="text-xl font-bold text-gray-900 mb-3">Acceso de Equipo</h3>
+              <p className="text-sm text-gray-800">
                 Múltiples usuarios por cuenta de inmobiliaria sin coste extra
               </p>
             </div>

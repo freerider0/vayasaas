@@ -20,24 +20,35 @@ class RoomJoiningService {
   /**
    * Join two rooms by injecting vertices at intersection points
    * This ensures clean wall separation at T-junctions
+   * Only modifies centerlinePolygon, not the inner floorPolygon
    * Returns true if any vertices were injected
    */
   joinRooms(roomEntityA: Entity, roomEntityB: Entity): boolean {
     const roomA = getRoomComponent(roomEntityA);
     const roomB = getRoomComponent(roomEntityB);
-    const geoA = roomEntityA.get(GeometryComponent) as GeometryComponent;
-    const geoB = roomEntityB.get(GeometryComponent) as GeometryComponent;
     const assemblyA = roomEntityA.get(AssemblyComponent) as AssemblyComponent;
     const assemblyB = roomEntityB.get(AssemblyComponent) as AssemblyComponent;
     
-    if (!roomA || !roomB || !geoA || !geoB || !assemblyA || !assemblyB) {
+    if (!roomA || !roomB || !assemblyA || !assemblyB) {
       console.warn('Cannot join rooms: missing components');
       return false;
     }
     
-    // Convert to world coordinates for comparison
-    const worldVerticesA = this.toWorldCoordinates(roomA.floorPolygon, assemblyA);
-    const worldVerticesB = this.toWorldCoordinates(roomB.floorPolygon, assemblyB);
+    // Ensure centerline polygons exist
+    if (!roomA.centerlinePolygon || roomA.centerlinePolygon.length < 3) {
+      wallPolygonService.updateRoomCenterline(roomA);
+    }
+    if (!roomB.centerlinePolygon || roomB.centerlinePolygon.length < 3) {
+      wallPolygonService.updateRoomCenterline(roomB);
+    }
+    
+    // Use centerline polygons for wall splitting (middle geometry)
+    const centerlineA = roomA.centerlinePolygon || roomA.floorPolygon;
+    const centerlineB = roomB.centerlinePolygon || roomB.floorPolygon;
+    
+    // Convert centerline polygons to world coordinates for comparison
+    const worldVerticesA = this.toWorldCoordinates(centerlineA, assemblyA);
+    const worldVerticesB = this.toWorldCoordinates(centerlineB, assemblyB);
     
     let modified = false;
     
@@ -48,19 +59,19 @@ class RoomJoiningService {
       // Convert intersection point back to B's local coordinates
       const localPoint = this.toLocalCoordinates([intersection.vertex], assemblyB)[0];
       
-      // Check if this vertex already exists in B (avoid duplicates)
-      if (!this.vertexExists(roomB.floorPolygon, localPoint, 1.0)) {
-        // Inject vertex into B's polygon
-        roomB.floorPolygon = injectVertex(
-          roomB.floorPolygon, 
-          intersection.edgeIndex, 
-          localPoint
+      // Check if this vertex already exists in B's centerline (avoid duplicates)
+      if (!this.vertexExists(centerlineB, localPoint, 1.0)) {
+        // Inject vertex into B's centerline polygon only
+        roomB.centerlinePolygon = ensureCounterClockwiseWinding(
+          injectVertex(
+            centerlineB, 
+            intersection.edgeIndex, 
+            localPoint
+          )
         );
         
-        // Update geometry component
-        if (geoB) {
-          geoB.setVertices(roomB.floorPolygon);
-        }
+        // DO NOT update floorPolygon or GeometryComponent
+        // Only the centerline is modified for wall splitting
         
         modified = true;
       }
@@ -73,29 +84,26 @@ class RoomJoiningService {
       // Convert intersection point back to A's local coordinates
       const localPoint = this.toLocalCoordinates([intersection.vertex], assemblyA)[0];
       
-      // Check if this vertex already exists in A (avoid duplicates)
-      if (!this.vertexExists(roomA.floorPolygon, localPoint, 1.0)) {
-        // Inject vertex into A's polygon
-        roomA.floorPolygon = injectVertex(
-          roomA.floorPolygon, 
-          intersection.edgeIndex, 
-          localPoint
+      // Check if this vertex already exists in A's centerline (avoid duplicates)
+      if (!this.vertexExists(centerlineA, localPoint, 1.0)) {
+        // Inject vertex into A's centerline polygon only
+        roomA.centerlinePolygon = ensureCounterClockwiseWinding(
+          injectVertex(
+            centerlineA, 
+            intersection.edgeIndex, 
+            localPoint
+          )
         );
         
-        // Update geometry component
-        if (geoA) {
-          geoA.setVertices(roomA.floorPolygon);
-        }
+        // DO NOT update floorPolygon or GeometryComponent
+        // Only the centerline is modified for wall splitting
         
         modified = true;
       }
     }
     
-    // If vertices were injected, recalculate centerline polygons
-    if (modified) {
-      wallPolygonService.updateRoomCenterline(roomA);
-      wallPolygonService.updateRoomCenterline(roomB);
-    }
+    // No need to recalculate centerlines since we directly modified them
+    // The centerlines now have the necessary vertices for wall splitting
     
     return modified;
   }

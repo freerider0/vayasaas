@@ -4,7 +4,7 @@
 
 import { BaseCommand, CommandContext } from './Command';
 import { GeometryComponent } from '../components/GeometryComponent';
-import { GeometrySystemRefactored } from '../systems/GeometrySystemRefactored';
+import { GeometrySystem } from '../systems/GeometrySystem';
 
 export type ConstraintType = 
   | 'fixed'
@@ -61,7 +61,7 @@ export class AddConstraintCommand extends BaseCommand<string> {
     geometry.isDirty = true;
     
     // Trigger immediate solve
-    const geoSystem = world.getSystem(GeometrySystemRefactored);
+    const geoSystem = world.getSystem(GeometrySystem);
     if (geoSystem) {
       geoSystem.solveImmediate(entity);
     }
@@ -90,7 +90,7 @@ export class AddConstraintCommand extends BaseCommand<string> {
     geometry.isDirty = true;
     
     // Trigger immediate solve
-    const geoSystem = world.getSystem(GeometrySystemRefactored);
+    const geoSystem = world.getSystem(GeometrySystem);
     if (geoSystem) {
       geoSystem.solveImmediate(entity);
     }

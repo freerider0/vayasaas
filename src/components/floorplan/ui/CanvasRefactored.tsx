@@ -28,7 +28,7 @@ import {
 import { useStore } from '@nanostores/react';
 
 // Systems
-import { GeometrySystemRefactored } from '../systems/GeometrySystemRefactored';
+import { GeometrySystem } from '../systems/GeometrySystem';
 import { MoveSystemRefactored } from '../systems/MoveSystemRefactored';
 
 interface CanvasRefactoredProps {
@@ -56,7 +56,7 @@ export const CanvasRefactored: React.FC<CanvasRefactoredProps> = ({
       const world = new World('main');
       
       // Add systems
-      world.addSystem(new GeometrySystemRefactored());
+      world.addSystem(new GeometrySystem());
       world.addSystem(new MoveSystemRefactored());
       
       // Set world in services

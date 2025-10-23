@@ -179,8 +179,18 @@ export class RoomAssemblySnapService {
     }
     
     const segments: LineSegment[] = [];
-    // Convert room vertices to world coordinates
-    const worldVertices = RoomComponent.getGlobalVertices(room, assembly as AssemblyComponent);
+    // Use centerline polygon for proximity checks (middle geometry)
+    // If centerline doesn't exist, calculate it
+    let polygonToUse = room.centerlinePolygon;
+    if (!polygonToUse || polygonToUse.length < 3) {
+      // Calculate centerline if not present
+      const { wallPolygonService } = require('./WallPolygonService');
+      wallPolygonService.updateRoomCenterline(room);
+      polygonToUse = room.centerlinePolygon || room.floorPolygon;
+    }
+    
+    // Convert centerline vertices to world coordinates
+    const worldVertices = RoomComponent.getGlobalVertices(room, assembly as AssemblyComponent, polygonToUse);
     
     // Apply offset to vertices
     const offsetVertices = worldVertices.map(v => ({

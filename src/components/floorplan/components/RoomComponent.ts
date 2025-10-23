@@ -207,8 +207,10 @@ export class RoomComponent {
   }
 
   // Get global vertices for a room (for rendering, hit testing, etc.)
-  static getGlobalVertices(room: RoomComponent, assembly: AssemblyComponent): Point[] {
-    return RoomComponent.localToGlobal(room.floorPolygon, assembly);
+  static getGlobalVertices(room: RoomComponent, assembly: AssemblyComponent, polygon?: Point[]): Point[] {
+    // Use provided polygon or default to floorPolygon
+    const polygonToUse = polygon || room.floorPolygon;
+    return RoomComponent.localToGlobal(polygonToUse, assembly);
   }
 
   // Edge constraint management methods

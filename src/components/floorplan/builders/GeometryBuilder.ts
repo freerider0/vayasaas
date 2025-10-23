@@ -1,5 +1,5 @@
 import { GeometryComponent, Point, Edge, Bounds } from '../components/GeometryComponent';
-import type { Primitive, PointPrimitive, LinePrimitive } from '../../../lib/geometry/NiceConstraintSolver';
+import type { Primitive, PointPrimitive, LinePrimitive } from '../../../lib/geometry/GradientDescentSolver';
 
 /**
  * Builder for creating geometry components with proper initialization

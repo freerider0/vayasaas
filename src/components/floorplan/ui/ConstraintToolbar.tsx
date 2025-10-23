@@ -5,7 +5,7 @@ import { World } from '../core/World';
 import { Entity } from '../core/Entity';
 import { GeometryComponent } from '../components/GeometryComponent';
 import { WallComponent } from '../components/WallComponent';
-import type { Primitive } from '../../../lib/geometry/NiceConstraintSolver';
+import type { Primitive } from '../../../lib/geometry/GradientDescentSolver';
 import { useStore } from '@nanostores/react';
 import { $selectedWallIds } from '../stores/canvasStore';
 
@@ -51,25 +51,99 @@ export function ConstraintToolbar({
   const effectiveEdgeIndex = wallEdgeIndex !== null ? wallEdgeIndex : selectedEdgeIndex;
   console.log('[ConstraintToolbar] effectiveEdgeIndex:', effectiveEdgeIndex, 'from wall:', wallEdgeIndex, 'or direct edge:', selectedEdgeIndex);
   
+  // Calculate DOF and constraint status - recalculate on every render to stay in sync
+  const constraintStatus = (() => {
+    if (!worldRef.current) return null;
+
+    const roomEntity = roomEntities.get(selectedRoomId);
+    if (!roomEntity) return null;
+
+    const geometry = roomEntity.get(GeometryComponent) as GeometryComponent;
+
+    // Initialize primitives if they don't exist yet
+    if (!geometry.primitives || geometry.primitives.length === 0) {
+      // Return status with 0 constraints if no primitives yet
+      const vertexCount = geometry.vertices?.length || 0;
+      if (vertexCount === 0) return null;
+
+      // Reserve 2 DOF for at least one fixed point (anchor point)
+      const totalDOF = Math.max(0, vertexCount * 2 - 2);
+      return {
+        constraintCount: 0,
+        totalDOF,
+        freePoints: vertexCount,
+        fixedPoints: 0,
+        totalPoints: vertexCount,
+        status: 'ok' as const,
+        usage: 0
+      };
+    }
+
+    const points = geometry.primitives.filter(p => p.type === 'point');
+    const constraints = geometry.primitives.filter(p => !['point', 'line', 'circle'].includes(p.type));
+
+    const fixedPoints = points.filter((p: any) => p.fixed).length;
+    const freePoints = points.length - fixedPoints;
+    const rawDOF = freePoints * 2;
+
+    // Reserve 2 DOF for at least one fixed point (anchor point for the geometry)
+    const totalDOF = Math.max(0, rawDOF - 2);
+    const constraintCount = constraints.length;
+
+    let status: 'ok' | 'warning' | 'error' = 'ok';
+    if (constraintCount >= totalDOF * 0.8) status = 'warning';
+    if (constraintCount > totalDOF) status = 'error';
+
+    return {
+      constraintCount,
+      totalDOF,
+      freePoints,
+      fixedPoints,
+      totalPoints: points.length,
+      status,
+      usage: totalDOF > 0 ? (constraintCount / totalDOF * 100) : 0
+    };
+  })();
+
   const addConstraint = (type: string, params: any) => {
     console.log('[ConstraintToolbar] Adding constraint:', type, params);
     if (!worldRef.current) {
       console.log('[ConstraintToolbar] No world reference');
       return;
     }
-    
+
     const roomEntity = roomEntities.get(selectedRoomId);
     if (!roomEntity) {
       console.log('[ConstraintToolbar] No room entity for:', selectedRoomId);
       return;
     }
-    
+
     const geometry = roomEntity.get(GeometryComponent) as GeometryComponent;
     if (!geometry) {
       console.log('[ConstraintToolbar] No geometry component');
       return;
     }
-    
+
+    // If adding horizontal or vertical constraint, remove any existing orientation constraints
+    // on the same edge (horizontal and vertical are mutually exclusive)
+    if (type === 'horizontal_pp' || type === 'vertical_pp') {
+      const { p1_id, p2_id } = params;
+
+      // Find all orientation constraints on this edge (check both directions)
+      const orientationConstraints = geometry.primitives.filter((p: any) =>
+        (p.type === 'horizontal_pp' || p.type === 'vertical_pp') && (
+          (p.p1_id === p1_id && p.p2_id === p2_id) ||
+          (p.p1_id === p2_id && p.p2_id === p1_id)
+        )
+      );
+
+      console.log(`[ConstraintToolbar] Removing ${orientationConstraints.length} existing orientation constraints before adding ${type}`);
+      orientationConstraints.forEach((c: any) => {
+        console.log(`[ConstraintToolbar] Removing ${c.type} constraint ${c.id}: ${c.p1_id} -> ${c.p2_id}`);
+        geometry.removeConstraint(c.id);
+      });
+    }
+
     console.log('[ConstraintToolbar] Adding constraint to geometry');
     geometry.addConstraint(type as any, params);
     // Entity will be updated after solving
@@ -82,19 +156,42 @@ export function ConstraintToolbar({
       <div className="bg-white rounded-lg shadow-lg p-2">
         <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 text-center">
           Constraints {
-            selectedVertexIndices.length > 0 
+            selectedVertexIndices.length > 0
               ? `(${selectedVertexIndices.length} vertices)`
-              : selectedEdgeIndices.length > 0 
+              : selectedEdgeIndices.length > 0
                 ? `(${selectedEdgeIndices.length} edges)`
-                : effectiveEdgeIndex !== null 
+                : effectiveEdgeIndex !== null
                   ? selectedWallIds.size > 0
-                    ? selectedWallIds.size === 1 
+                    ? selectedWallIds.size === 1
                       ? `(Wall - Edge ${effectiveEdgeIndex + 1})`
                       : `(${selectedWallIds.size} walls selected)`
                     : `(Edge ${effectiveEdgeIndex + 1})`
                   : '(Select walls or Shift+Click edges)'
           }
         </div>
+
+        {/* DOF Status Display */}
+        {constraintStatus && (
+          <div className={`text-xs px-2 py-1 rounded mb-2 text-center font-mono ${
+            constraintStatus.status === 'error'
+              ? 'bg-red-100 text-red-700 border border-red-300'
+              : constraintStatus.status === 'warning'
+                ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
+                : 'bg-green-100 text-green-700 border border-green-300'
+          }`}>
+            <div className="font-semibold">
+              {constraintStatus.status === 'error' && '⚠️ OVER-CONSTRAINED'}
+              {constraintStatus.status === 'warning' && '⚡ Near Limit'}
+              {constraintStatus.status === 'ok' && '✓ OK'}
+            </div>
+            <div className="mt-1">
+              Constraints: <span className="font-bold">{constraintStatus.constraintCount}</span> / DOF: <span className="font-bold">{constraintStatus.totalDOF}</span>
+            </div>
+            <div className="text-[10px] opacity-75">
+              ({constraintStatus.usage.toFixed(0)}% used · {constraintStatus.freePoints} free pts)
+            </div>
+          </div>
+        )}
         <div className="flex gap-1">
           {/* Horizontal constraint */}
           <button
@@ -417,7 +514,7 @@ export function ConstraintToolbar({
                   const [idx1, idx2] = selectedVertexIndices;
                   const p1 = geometry.vertices[idx1];
                   const p2 = geometry.vertices[idx2];
-                  
+
                   if (p1 && p2) {
                     const currentDistance = Math.sqrt(
                       (p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2
@@ -426,6 +523,17 @@ export function ConstraintToolbar({
                     if (input) {
                       const newDistance = parseFloat(input);
                       if (!isNaN(newDistance) && newDistance > 0) {
+                        // IMPORTANT: Fix the first point to prevent scale drift
+                        // This anchors the geometry and prevents the solver from scaling
+                        const p1Primitive = geometry.primitives.find(
+                          (p: any) => p.type === 'point' && p.id === `p${idx1}`
+                        ) as any;
+
+                        if (p1Primitive && !p1Primitive.fixed) {
+                          console.log('[ConstraintToolbar] Auto-fixing anchor point to prevent scale drift');
+                          p1Primitive.fixed = true;
+                        }
+
                         addConstraint('p2p_distance', {
                           p1_id: `p${idx1}`,
                           p2_id: `p${idx2}`,

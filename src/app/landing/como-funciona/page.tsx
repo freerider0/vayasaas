@@ -41,7 +41,7 @@ export default function ComoFunciona() {
             <h1 className="text-5xl font-bold text-gray-900 mb-6">
               Cómo funciona
             </h1>
-            <p className="text-xl text-gray-600 leading-relaxed">
+            <p className="text-xl text-gray-800 leading-relaxed">
               Certificados ilimitados para tu inmobiliaria en 4 pasos simples.<br />
               Sin complicaciones, sin sorpresas.
             </p>
@@ -58,7 +58,7 @@ export default function ComoFunciona() {
                       <path d="M5 4v12l10-6z" />
                     </svg>
                   </div>
-                  <p className="text-gray-600">Video explicativo (1 minuto)</p>
+                  <p className="text-gray-800">Video explicativo (1 minuto)</p>
                 </div>
               </div>
             </div>
@@ -81,7 +81,7 @@ export default function ComoFunciona() {
                   <h2 className="text-3xl font-bold text-gray-900 mb-4">
                     {step.title}
                   </h2>
-                  <p className="text-lg text-gray-600 leading-relaxed">
+                  <p className="text-lg text-gray-800 leading-relaxed">
                     {step.description}
                   </p>
                 </div>
@@ -106,25 +106,25 @@ export default function ComoFunciona() {
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">
+                  <span className="text-gray-800">
                     Evaluación completa de eficiencia energética
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">
+                  <span className="text-gray-800">
                     Registro oficial en ICAEN o organismo autonómico
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">
+                  <span className="text-gray-800">
                     Certificado con firma digital del arquitecto
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">
+                  <span className="text-gray-800">
                     Válido para venta y alquiler de inmuebles
                   </span>
                 </li>
@@ -138,25 +138,25 @@ export default function ComoFunciona() {
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">
+                  <span className="text-gray-800">
                     Inspección de condiciones de habitabilidad
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">
+                  <span className="text-gray-800">
                     Documento oficial para contratos de alquiler
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">
+                  <span className="text-gray-800">
                     Tramitación completa incluida
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Check className="w-5 h-5 text-green-600 mt-1 flex-shrink-0" />
-                  <span className="text-gray-600">
+                  <span className="text-gray-800">
                     Visita técnica cuando sea necesaria
                   </span>
                 </li>
@@ -168,18 +168,18 @@ export default function ComoFunciona() {
             <h3 className="text-xl font-semibold text-gray-900 mb-6">
               Generación automática de contratos
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-800 mb-6">
               Con solo 2 fotos (DNI + referencia catastral) genera instantáneamente:
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-gray-600">• Mandato de venta</div>
-              <div className="text-gray-600">• Contrato de arras</div>
-              <div className="text-gray-600">• Hoja de visita</div>
-              <div className="text-gray-600">• Contrato de alquiler</div>
-              <div className="text-gray-600">• Anexo inventario</div>
-              <div className="text-gray-600">• Contrato exclusividad</div>
-              <div className="text-gray-600">• Nota de encargo</div>
-              <div className="text-gray-600">• Y más...</div>
+              <div className="text-gray-800">• Mandato de venta</div>
+              <div className="text-gray-800">• Contrato de arras</div>
+              <div className="text-gray-800">• Hoja de visita</div>
+              <div className="text-gray-800">• Contrato de alquiler</div>
+              <div className="text-gray-800">• Anexo inventario</div>
+              <div className="text-gray-800">• Contrato exclusividad</div>
+              <div className="text-gray-800">• Nota de encargo</div>
+              <div className="text-gray-800">• Y más...</div>
             </div>
           </div>
         </div>
@@ -203,28 +203,28 @@ export default function ComoFunciona() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 <tr>
-                  <td className="py-4 px-4 text-gray-600">Precio por certificado</td>
-                  <td className="text-center py-4 px-4 text-gray-600">€250-350</td>
+                  <td className="py-4 px-4 text-gray-800">Precio por certificado</td>
+                  <td className="text-center py-4 px-4 text-gray-800">€250-350</td>
                   <td className="text-center py-4 px-4 font-semibold text-green-600">€0 (ilimitados)</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-4 text-gray-600">Tiempo de entrega</td>
-                  <td className="text-center py-4 px-4 text-gray-600">5-10 días</td>
+                  <td className="py-4 px-4 text-gray-800">Tiempo de entrega</td>
+                  <td className="text-center py-4 px-4 text-gray-800">5-10 días</td>
                   <td className="text-center py-4 px-4 font-semibold text-green-600">24-48h</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-4 text-gray-600">Facturación directa</td>
-                  <td className="text-center py-4 px-4 text-gray-600">No disponible</td>
+                  <td className="py-4 px-4 text-gray-800">Facturación directa</td>
+                  <td className="text-center py-4 px-4 text-gray-800">No disponible</td>
                   <td className="text-center py-4 px-4 font-semibold text-green-600">Sí (plan €100)</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-4 text-gray-600">Contratos automáticos</td>
-                  <td className="text-center py-4 px-4 text-gray-600">No incluido</td>
+                  <td className="py-4 px-4 text-gray-800">Contratos automáticos</td>
+                  <td className="text-center py-4 px-4 text-gray-800">No incluido</td>
                   <td className="text-center py-4 px-4 font-semibold text-green-600">Incluido</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-4 text-gray-600">Programa afiliados</td>
-                  <td className="text-center py-4 px-4 text-gray-600">No existe</td>
+                  <td className="py-4 px-4 text-gray-800">Programa afiliados</td>
+                  <td className="text-center py-4 px-4 text-gray-800">No existe</td>
                   <td className="text-center py-4 px-4 font-semibold text-green-600">Comisiones extra</td>
                 </tr>
               </tbody>
@@ -239,7 +239,7 @@ export default function ComoFunciona() {
           <h2 className="text-3xl font-bold text-gray-900 mb-6">
             Prueba gratis con tu primer certificado
           </h2>
-          <p className="text-xl text-gray-600 mb-8">
+          <p className="text-xl text-gray-800 mb-8">
             Sin tarjeta de crédito. Sin compromiso. <br />
             Comprueba la calidad de nuestro servicio.
           </p>

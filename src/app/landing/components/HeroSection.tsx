@@ -3,31 +3,44 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Play, Sparkles } from 'lucide-react'
 
 export function HeroSection() {
   const [email, setEmail] = useState('')
 
   return (
     <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
-      <div className="absolute inset-0 bg-white" />
-      
+      {/* Animated Background */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-50 via-white to-blue-50" />
+        <div className="absolute top-20 left-10 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" />
+        <div className="absolute top-40 right-10 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
+        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000" />
+      </div>
+
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         <div className="text-center">
-          <p className="text-sm font-medium text-gray-600 mb-4">
-            Arquitecto Colegiado • 15+ años de experiencia
-          </p>
+          {/* Premium Badge */}
+          <div className="inline-flex items-center gap-2 mb-8 bg-white/80 backdrop-blur-sm rounded-full px-4 py-2 shadow-lg border border-purple-100">
+            <Sparkles className="w-4 h-4 text-purple-600" />
+            <span className="text-sm font-bold text-gray-700">Arquitecto Colegiado • 15+ años • 500+ inmobiliarias</span>
+          </div>
           
-          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 tracking-tight">
-            Certificados Ilimitados
-            <span className="block text-indigo-600">
-              Una Sola Cuota Mensual
+          <h1 className="text-6xl sm:text-7xl lg:text-8xl font-black text-gray-900 mb-8 tracking-tight leading-[0.9]">
+            Certificados
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
+              Ilimitados
+            </span>
+            <span className="block text-4xl lg:text-5xl font-light text-gray-600 mt-4">
+              desde 50€/mes
             </span>
           </h1>
           
-          <p className="text-xl text-gray-700 mb-8 max-w-3xl mx-auto leading-relaxed">
-            Deja de pagar por certificado. Obtén cédulas de habitabilidad y certificados energéticos 
-            ilimitados para todas tus transacciones inmobiliarias. Más de 500 inmobiliarias confían en nosotros.
+          <p className="text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+            Olvida los <span className="font-semibold text-gray-500 line-through">€250</span> por certificado.
+            <span className="block mt-2">
+              Todo ilimitado. Sin sorpresas. Sin límites.
+            </span>
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12 max-w-md mx-auto">
@@ -47,45 +60,60 @@ export function HeroSection() {
             </Button>
           </div>
           
-          <div className="flex items-center justify-center gap-4 text-sm text-gray-600 mb-12">
+          <div className="flex items-center justify-center gap-4 text-sm text-gray-800 mb-12">
             <span>✓ 100% Cumplimiento Legal</span>
             <span>✓ Entrega en 48h</span>
             <span>✓ Cancela cuando quieras</span>
           </div>
           
-          {/* Video Section */}
-          <div className="max-w-4xl mx-auto mb-16">
-            <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden shadow-lg">
-              {/* Replace this div with your video player */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-20 h-20 mx-auto mb-4 bg-indigo-600 rounded-full flex items-center justify-center">
-                    <svg className="w-10 h-10 text-white ml-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M5 4v12l10-6z" />
-                    </svg>
+          {/* Video Section - Premium Design */}
+          <div className="max-w-5xl mx-auto mb-20">
+            <div className="relative group cursor-pointer">
+              {/* Video Container */}
+              <div className="relative aspect-video bg-gradient-to-br from-purple-100 to-blue-100 rounded-3xl overflow-hidden shadow-2xl">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 to-blue-600/20" />
+
+                {/* Play Button Overlay */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-white rounded-full animate-ping" />
+                    <button className="relative w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform duration-300">
+                      <Play className="w-10 h-10 text-purple-600 ml-1 fill-current" />
+                    </button>
                   </div>
-                  <p className="text-gray-600">Descubre cómo ahorrar €4.000/mes (1 minuto)</p>
                 </div>
+
+                {/* Video Label */}
+                <div className="absolute bottom-6 left-6 bg-white/90 backdrop-blur-sm rounded-2xl px-6 py-3">
+                  <p className="text-sm font-bold text-gray-900">Cómo ahorrar 4.000€/mes</p>
+                  <p className="text-xs text-gray-600">Video explicativo • 90 segundos</p>
+                </div>
+              </div>
+
+              {/* Decorative Elements */}
+              <div className="absolute -top-4 -right-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl px-3 py-1.5 text-white text-xs font-bold shadow-lg">
+                🔥 Más visto
               </div>
             </div>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-            <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900">10.000+</div>
-              <div className="text-sm text-gray-600">Certificados Emitidos</div>
+          {/* Stats - Glassmorphism Design */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
+            <div className="bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/20 group hover:scale-105 transition-transform">
+              <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">10K+</div>
+              <div className="text-sm text-gray-700 font-semibold mt-2">Certificados</div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900">48h</div>
-              <div className="text-sm text-gray-600">Tiempo de Entrega</div>
+            <div className="bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/20 group hover:scale-105 transition-transform">
+              <div className="text-5xl font-black text-gray-900">48h</div>
+              <div className="text-sm text-gray-700 font-semibold mt-2">Garantía entrega</div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900">500+</div>
-              <div className="text-sm text-gray-600">Inmobiliarias</div>
+            <div className="bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/20 group hover:scale-105 transition-transform">
+              <div className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">500+</div>
+              <div className="text-sm text-gray-700 font-semibold mt-2">Inmobiliarias</div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl font-bold text-gray-900">70%</div>
-              <div className="text-sm text-gray-600">Ahorro Mensual</div>
+            <div className="bg-white/60 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-white/20 group hover:scale-105 transition-transform">
+              <div className="text-5xl font-black text-gray-900">70%</div>
+              <div className="text-sm text-gray-700 font-semibold mt-2">Ahorro medio</div>
             </div>
           </div>
         </div>

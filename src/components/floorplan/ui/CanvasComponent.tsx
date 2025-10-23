@@ -144,12 +144,13 @@ export const CanvasComponent = forwardRef<HTMLCanvasElement, CanvasComponentProp
     // Handle keyboard events
     useEffect(() => {
       const handleKeyDown = (e: KeyboardEvent) => {
-        // Delete key
-        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedRoomId && mode === EditorMode.Edit) {
+        // Delete key - ONLY in Assembly mode for deleting entire rooms
+        // In Edit mode, deletion is handled by UnifiedInputHandler for vertices
+        if ((e.key === 'Delete' || e.key === 'Backspace') && selectedRoomId && mode === EditorMode.Assembly) {
           e.preventDefault();
           deleteSelectedRoom();
         }
-        
+
         // Mode switching shortcuts
         if (e.key === 'd' || e.key === 'D') {
           canvasEventBus.emit('mode:draw' as any, {});
@@ -159,7 +160,7 @@ export const CanvasComponent = forwardRef<HTMLCanvasElement, CanvasComponentProp
           }
         }
       };
-      
+
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }, [mode, selectedRoomId, deleteSelectedRoom]);

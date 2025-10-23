@@ -4,43 +4,43 @@
 
 import { Point } from '../components/GeometryComponent';
 import { RoomComponent } from '../components/RoomComponent';
-import { CENTERLINE_OFFSET, EXTERIOR_WALL_THICKNESS } from '../constants';
+import { CENTERLINE_OFFSET, EXTERIOR_WALL_THICKNESS, INTERIOR_WALL_THICKNESS } from '../constants';
 import { offsetPolygon } from '../utils/polygonOperations';
 
 class WallPolygonService {
   /**
    * Calculate the centerline polygon for a room
-   * This polygon is offset outward by CENTERLINE_OFFSET (5cm)
+   * This polygon is offset outward by half the wall thickness
    * Used for wall placement
    */
-  calculateCenterlinePolygon(floorPolygon: Point[]): Point[] {
+  calculateCenterlinePolygon(floorPolygon: Point[], wallThickness: number = INTERIOR_WALL_THICKNESS): Point[] {
     if (!floorPolygon || floorPolygon.length < 3) {
       return floorPolygon;
     }
 
-    // Offset outward by 5cm (half of interior wall thickness)
-    return offsetPolygon(floorPolygon, CENTERLINE_OFFSET);
+    // Offset outward by half of the wall thickness
+    return offsetPolygon(floorPolygon, wallThickness / 2);
   }
 
   /**
    * Calculate the external polygon for a room
    * This polygon includes the full wall thickness
    */
-  calculateExternalPolygon(floorPolygon: Point[]): Point[] {
+  calculateExternalPolygon(floorPolygon: Point[], wallThickness: number = EXTERIOR_WALL_THICKNESS): Point[] {
     if (!floorPolygon || floorPolygon.length < 3) {
       return floorPolygon;
     }
 
-    // Offset outward by exterior wall thickness (30cm)
-    return offsetPolygon(floorPolygon, EXTERIOR_WALL_THICKNESS);
+    // Offset outward by full wall thickness
+    return offsetPolygon(floorPolygon, wallThickness);
   }
 
   /**
    * Update all polygons for a room component
    */
-  updateRoomCenterline(room: RoomComponent): void {
-    room.centerlinePolygon = this.calculateCenterlinePolygon(room.floorPolygon);
-    room.externalPolygon = this.calculateExternalPolygon(room.floorPolygon);
+  updateRoomCenterline(room: RoomComponent, wallThickness: number = INTERIOR_WALL_THICKNESS): void {
+    room.centerlinePolygon = this.calculateCenterlinePolygon(room.floorPolygon, wallThickness);
+    room.externalPolygon = this.calculateExternalPolygon(room.floorPolygon, wallThickness);
 
     // Debug: Log polygon sizes to verify offsets
   }

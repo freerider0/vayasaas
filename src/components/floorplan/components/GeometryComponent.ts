@@ -1,10 +1,10 @@
 import { BaseComponent } from '../core/Component';
-import type { 
-  Primitive, 
-  PointPrimitive, 
-  LinePrimitive, 
-  ConstraintPrimitive 
-} from '../../../lib/geometry/NiceConstraintSolver';
+import type {
+  Primitive,
+  PointPrimitive,
+  LinePrimitive,
+  ConstraintPrimitive
+} from '../../../lib/geometry/GradientDescentSolver';
 
 export interface Point {
   x: number;
@@ -82,9 +82,9 @@ export class GeometryComponent extends BaseComponent {
     if (!this.primitives || this.primitives.length === 0) {
       this.initializePrimitives();
     }
-    
+
     const id = `c_${this.nextConstraintId++}`;
-    
+
     const constraint: any = {
       ...params,
       id,
@@ -93,8 +93,50 @@ export class GeometryComponent extends BaseComponent {
 
     this.primitives.push(constraint as Primitive);
     this.isDirty = true;
-    
+
+    // Check for over-constraining after adding
+    this.checkConstraintHealth();
+
     return id;
+  }
+
+  /**
+   * Check if the geometry might be over-constrained
+   */
+  private checkConstraintHealth(): void {
+    const points = this.primitives.filter(p => p.type === 'point');
+    const constraints = this.primitives.filter(p => !['point', 'line', 'circle'].includes(p.type));
+
+    if (constraints.length === 0) return;
+
+    // Count fixed points
+    const fixedPoints = points.filter((p: any) => p.fixed).length;
+    const freePoints = points.length - fixedPoints;
+
+    // Each free point has 2 DOF (x, y)
+    // Reserve 2 DOF for at least one fixed point (anchor point for the geometry)
+    const rawDOF = freePoints * 2;
+    const totalDOF = Math.max(0, rawDOF - 2);
+    const constraintDOF = constraints.length;
+
+    // Warn if we're approaching or exceeding DOF
+    if (constraintDOF >= totalDOF * 0.8) {
+      console.warn(`[Geometry] Approaching constraint limit: ${constraintDOF} constraints for ${totalDOF} usable DOF (${rawDOF} raw DOF, ${freePoints} free points, -2 for anchor)`);
+    }
+
+    if (constraintDOF > totalDOF) {
+      console.error(`[Geometry] ⚠️ OVER-CONSTRAINED: ${constraintDOF} constraints exceed ${totalDOF} usable DOF. Solver may fail!`);
+      console.log(`  Points: ${points.length} (${freePoints} free, ${fixedPoints} fixed)`);
+      console.log(`  Raw DOF: ${rawDOF}, Usable DOF: ${totalDOF} (reserved 2 for anchor)`);
+      console.log(`  Constraints: ${constraintDOF}`);
+
+      // Group constraints by type
+      const constraintsByType: Record<string, number> = {};
+      for (const c of constraints) {
+        constraintsByType[c.type] = (constraintsByType[c.type] || 0) + 1;
+      }
+      console.table(constraintsByType);
+    }
   }
   
   // Initialize primitives from current vertices and edges

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowRight, CheckCircle, Calculator, FileCheck } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 export function CTASection() {
   const [email, setEmail] = useState('')
@@ -20,9 +20,8 @@ export function CTASection() {
       <div className="absolute inset-0 bg-grid-white/10 bg-grid-16" />
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <div className="inline-flex items-center gap-2 bg-green-500/20 text-green-300 px-4 py-2 rounded-full mb-6">
-          <Calculator className="w-4 h-4" />
-          <span className="text-sm font-medium">Las inmobiliarias ahorran una media de €3.500/mes</span>
+        <div className="inline-flex items-center bg-green-500/20 text-green-300 px-5 py-2 rounded-full mb-6">
+          <span className="text-base font-semibold">Las inmobiliarias ahorran una media de €3.500/mes</span>
         </div>
 
         <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
@@ -53,8 +52,7 @@ export function CTASection() {
         <div className="flex flex-wrap justify-center gap-4 text-sm text-white/90 mb-12">
           {benefits.map((benefit, index) => (
             <div key={index} className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-green-400" />
-              <span>{benefit}</span>
+              <span className="text-white">• {benefit}</span>
             </div>
           ))}
         </div>

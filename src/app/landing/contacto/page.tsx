@@ -69,7 +69,7 @@ export default function Contacto() {
       <section className="pt-24 pb-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-600 mb-4">
+            <p className="text-sm font-medium text-gray-800 mb-4">
               Respuesta en menos de 24h
             </p>
             <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">

@@ -10,7 +10,7 @@ import { InteractableComponent } from '../components/InteractableComponent';
 import { $toolMode, $editorMode, $editingState, $gridConfig, ToolMode, EditorMode, enterFocusMode, exitFocusMode } from '../stores/canvasStore';
 import { snappingService } from '../services/SnappingService';
 import { renderManagerService } from '../services/RenderManagerService';
-import { NiceConstraintSolver, Primitive, PointPrimitive, LinePrimitive } from '../../../lib/geometry/NiceConstraintSolver';
+import { GradientDescentSolver, Primitive, PointPrimitive, LinePrimitive } from '../../../lib/geometry/GradientDescentSolver';
 import { ensureCounterClockwiseWinding } from '../utils/geometryConversions';
 import { GeometryBuilder } from '../builders/GeometryBuilder';
 import { wallGenerationService } from '../services/WallGenerationService';
@@ -27,7 +27,7 @@ export class GeometrySystem extends BaseSystem {
   updateOrder: number = 10; // Process geometry before assembly
   
   // The solver is owned by the system, not the component
-  private solver: NiceConstraintSolver = new NiceConstraintSolver();
+  private solver: GradientDescentSolver = new GradientDescentSolver();
   
   // UI entities are NOT state - they're derived from state
   private vertexHandles: Map<number, Entity> = new Map();
@@ -616,8 +616,9 @@ export class GeometrySystem extends BaseSystem {
     });
     if (edgeIndex === -1) return;
 
-    // Insert vertex
-    geometry.addVertex(localPoint, edgeIndex + 1);
+    // Insert vertex directly into the vertices array
+    geometry.vertices.splice(edgeIndex + 1, 0, localPoint);
+    geometry.isDirty = true;
 
     world.updateEntity(this.selectedRoom);
     this.createVertexHandles(world);
@@ -631,7 +632,9 @@ export class GeometrySystem extends BaseSystem {
     const geometry = this.selectedRoom.get(GeometryComponent) as GeometryComponent | undefined;
     if (!geometry || geometry.vertices.length <= 3) return;
 
-    geometry.removeVertex(editState.selectedVertexIndex);
+    // Remove vertex directly from the vertices array
+    geometry.vertices.splice(editState.selectedVertexIndex, 1);
+    geometry.isDirty = true;
 
     world.updateEntity(this.selectedRoom);
     $editingState.setKey("selectedVertexIndex", null);
@@ -686,6 +689,19 @@ export class GeometrySystem extends BaseSystem {
     await this.solveEntityImmediate(entity, world);
   }
 
+  /**
+   * Force immediate constraint solving for an entity
+   * Called from commands when constraints change
+   */
+  async solveImmediate(entity: Entity): Promise<boolean> {
+    const geometry = entity.get(GeometryComponent);
+    if (!geometry) return false;
+
+    geometry.isDirty = true;
+    await this.solveEntityImmediate(entity, this.world || undefined);
+    return geometry.solverStatus === 'solved';
+  }
+
   // Constraint solving - using immediate solving only
 
   private async solveEntity(entity: Entity): Promise<void> {
@@ -715,11 +731,11 @@ export class GeometrySystem extends BaseSystem {
       this.syncPrimitivesToVertices(geometry);
       
       // Reset solver state before solving - critical!
-      this.solver = new NiceConstraintSolver();
+      this.solver = new GradientDescentSolver();
       this.solver.push_primitives_and_params(geometry.primitives);
-      
+
       const startTime = performance.now();
-      const solved = this.solver.solve();
+      const solved = await this.solver.solve();
       const solveTime = performance.now() - startTime;
       
       if (solved) {
@@ -799,12 +815,12 @@ export class GeometrySystem extends BaseSystem {
       // Reset solver state before solving - critical!
       // But preserve the world reference!
       const savedWorld = this.world;
-      this.solver = new NiceConstraintSolver();
+      this.solver = new GradientDescentSolver();
       this.world = savedWorld;
-      
+
       this.solver.push_primitives_and_params(geometry.primitives);
-      
-      const solved = this.solver.solve();
+
+      const solved = await this.solver.solve();
       
       // Solver result obtained
       
@@ -1200,11 +1216,12 @@ export class GeometrySystem extends BaseSystem {
   private syncPrimitivesToVertices(geometry: GeometryComponent): void {
     // The geometry's primitives are the source of truth
     // Just update point positions from current vertices before solving
-    
+
     if (!geometry.primitives || geometry.primitives.length === 0) {
       // Initialize primitives for new geometry
+      // CRITICAL: No existing constraints to preserve since this is new geometry
       const primitives: Primitive[] = [];
-      
+
       // Add point primitives from vertices
       for (let i = 0; i < geometry.vertices.length; i++) {
         const vertex = geometry.vertices[i];
@@ -1216,7 +1233,7 @@ export class GeometrySystem extends BaseSystem {
           fixed: false
         } as PointPrimitive);
       }
-      
+
       // Add line primitives for all edges
       for (let i = 0; i < geometry.edges.length; i++) {
         const edge = geometry.edges[i];
@@ -1227,21 +1244,68 @@ export class GeometrySystem extends BaseSystem {
           p2_id: `p${edge.endIndex}`
         } as LinePrimitive);
       }
-      
+
       geometry.setPrimitives(primitives);
     } else {
-      // Update existing point positions from vertices (e.g., after dragging)
-      for (let i = 0; i < geometry.vertices.length; i++) {
-        const vertex = geometry.vertices[i];
-        const pointId = `p${i}`;
-        const point = geometry.primitives.find(p => p.id === pointId && p.type === 'point') as PointPrimitive;
-        if (point) {
-          point.x = vertex.x;
-          point.y = vertex.y;
+      // CRITICAL: Preserve existing constraints before updating primitives
+      const existingConstraints = geometry.primitives
+        ? geometry.primitives.filter(p => !['point', 'line', 'circle'].includes(p.type))
+        : [];
+
+
+      // Check if vertices count changed (e.g., vertex added/deleted)
+      const vertexCountChanged = geometry.vertices.length !== geometry.primitives.filter(p => p.type === 'point').length;
+
+      if (vertexCountChanged) {
+        // Rebuild primitives when vertex count changes, but PRESERVE constraints
+        const primitives: Primitive[] = [];
+
+        // Add point primitives from vertices
+        for (let i = 0; i < geometry.vertices.length; i++) {
+          const vertex = geometry.vertices[i];
+
+          // Check if this point had a fixed constraint
+          const existingPoint = geometry.primitives?.find(p => p.id === `p${i}` && p.type === 'point') as PointPrimitive;
+
+          primitives.push({
+            id: `p${i}`,
+            type: 'point',
+            x: vertex.x,
+            y: vertex.y,
+            fixed: existingPoint?.fixed || false
+          } as PointPrimitive);
+        }
+
+        // Add line primitives for all edges
+        for (let i = 0; i < geometry.edges.length; i++) {
+          const edge = geometry.edges[i];
+          primitives.push({
+            id: `l${i}`,
+            type: 'line',
+            p1_id: `p${edge.startIndex}`,
+            p2_id: `p${edge.endIndex}`
+          } as LinePrimitive);
+        }
+
+        // CRITICAL: Re-add all constraints!
+        primitives.push(...existingConstraints);
+
+        geometry.setPrimitives(primitives);
+      } else {
+        // Just update existing point positions from vertices (e.g., after dragging)
+        // IMPORTANT: This PRESERVES constraints by only updating point coordinates
+        for (let i = 0; i < geometry.vertices.length; i++) {
+          const vertex = geometry.vertices[i];
+          const pointId = `p${i}`;
+          const point = geometry.primitives.find(p => p.id === pointId && p.type === 'point') as PointPrimitive;
+          if (point) {
+            point.x = vertex.x;
+            point.y = vertex.y;
+          }
         }
       }
     }
-    
+
     // Synced primitives with constraints
   }
   

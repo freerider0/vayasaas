@@ -415,21 +415,27 @@ export const FloorPlanApp: React.FC = () => {
         
         if (line && line.p1_id && line.p2_id) {
           // Remove any existing p2p_distance constraint for these points
-          const existingConstraints = geometry.primitives.filter((p: any) => 
-            p.type === 'p2p_distance' && 
-            p.p1_id === line.p1_id && 
-            p.p2_id === line.p2_id
+          // Check both directions since constraints can be stored as p0→p1 or p1→p0
+          const existingConstraints = geometry.primitives.filter((p: any) =>
+            p.type === 'p2p_distance' && (
+              (p.p1_id === line.p1_id && p.p2_id === line.p2_id) ||
+              (p.p1_id === line.p2_id && p.p2_id === line.p1_id)
+            )
           );
-          
+
+          console.log(`[Dimension Edit] Removing ${existingConstraints.length} existing constraints for edge ${editingDimension}`);
           existingConstraints.forEach((c: any) => {
+            console.log(`[Dimension Edit] Removing constraint ${c.id}: ${c.p1_id} -> ${c.p2_id}, distance: ${c.distance}`);
             geometry.removeConstraint(c.id);
           });
-          
-          geometry.addConstraint('p2p_distance', {
+
+          // Add new constraint with the updated distance
+          const constraintId = geometry.addConstraint('p2p_distance', {
             p1_id: line.p1_id,
             p2_id: line.p2_id,
             distance: newLengthCm
           });
+          console.log(`[Dimension Edit] Added new constraint ${constraintId}: ${line.p1_id} -> ${line.p2_id}, distance: ${newLengthCm}cm (${newLengthMeters}m)`);
         }
         
         // Trigger constraint solving
@@ -478,8 +484,9 @@ export const FloorPlanApp: React.FC = () => {
         }
       }
       
-      // Delete
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedRoomId && mode === EditorMode.Edit) {
+      // Delete - ONLY in Assembly mode for deleting entire rooms
+      // In Edit mode, deletion is handled by UnifiedInputHandler for vertices
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedRoomId && mode === EditorMode.Assembly) {
         e.preventDefault();
         deleteSelectedRoom();
       }

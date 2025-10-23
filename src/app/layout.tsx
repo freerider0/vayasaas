@@ -24,10 +24,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <head>
-        {/* Load the actual @salusoft89/planegcs package GcsWrapper */}
-        <script src="/planegcs/package-wrapper-loader.js"></script>
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
